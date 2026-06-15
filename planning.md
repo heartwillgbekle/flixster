@@ -23,10 +23,11 @@ App
 - **State:** `movies`, `searchQuery`, `page`, `mode` (`"now_playing" | "search"`), `selectedMovieId` (later), `sortOption` (later), `isLoading`, `error`, `hasMore`.
 
 #### Header
-- **Responsibility:** Display the app title/logo and branding.
-- **Renders:** App title ("Flixster"), logo/icon.
+- **Responsibility:** Display the app title, logo, and tagline. Pure branding — no controls.
+- **Renders:** SVG logo ([`flixster-logo.svg`](src/assets/flixster-logo.svg)) + "Flixster" title + tagline ("Discover what's playing now.").
 - **Props:** None.
 - **State:** None (presentational).
+- **Note:** The "Now Playing" mode toggle moved out of the header into a dedicated toolbar inside `<main>` so Header can stay prop-less. Keeps branding separate from controls.
 
 #### SearchBar
 - **Responsibility:** Capture user search input and trigger search/clear actions.
@@ -65,10 +66,10 @@ App
 - **Side effects:** Locks body scroll while open via `document.body.style.overflow = 'hidden'`; restored on unmount.
 
 #### Footer
-- **Responsibility:** Display attribution to TMDb and any copyright/links.
-- **Renders:** "Powered by TMDb" text + logo.
+- **Responsibility:** Display copyright notice and the TMDb attribution required by their terms of use.
+- **Renders:** © {currentYear} Flixster + a paragraph attributing data to The Movie Database with an external link to https://www.themoviedb.org/ and the standard "not endorsed by TMDb" disclaimer.
 - **Props:** None.
-- **State:** None.
+- **State:** None (year is computed at module load).
 
 ---
 
@@ -280,6 +281,18 @@ A running log of what shipped per milestone, what diverged from the original pla
   - **Comparators live module-scope**, not inside the component. They never change, so re-creating them per render is wasted work.
   - **Sort persists across mode switches and Load More** — intentional. Searching while sorted by rating keeps the search results sorted by rating; loading more pages folds new movies into the existing sort order.
 - **Edge cases handled / accepted:** `localeCompare` handles unicode/diacritics correctly; missing `release_date` (rare) sorts to `NaN` which is benign; `vote_average` defaults to 0 from TMDb so missing-rating sort is well-defined.
+
+### Milestone 6 — Header + Footer + Logo
+- **Built:** [`Header`](src/components/Header.jsx) + [`Header.css`](src/components/Header.css) — logo, title, tagline. [`Footer`](src/components/Footer.jsx) + [`Footer.css`](src/components/Footer.css) — copyright + TMDb attribution link. New SVG logo at [`src/assets/flixster-logo.svg`](src/assets/flixster-logo.svg) — red film canister with white perforation squares and a centered play triangle. Single asset import means it works at any size and ships as one tiny SVG.
+- **App changes:** Replaced inline `<header className="App-header">` with `<Header />`. Wrapped the existing controls + grid in `<main className="App-main">` and added `<Footer />` at the bottom. Moved the "Now Playing" mode toggle out of the header into a small `App-toolbar` div inside `<main>` so Header could stay prop-less per the spec. Made `.App` a flex column with `min-height: 100vh` and `<main>` flex-grow so the footer always sits at the bottom even on short pages.
+- **App.css cleanup:** Removed all `.App-header` and `.App-header__nav` rules (Header owns its own styling now). Removed the `@media (max-width: 600px) .App-header` block since Header.css has its own mobile rules.
+- **Decisions worth keeping:**
+  - **SVG logo as a static import** (not inline JSX). Vite handles it as a regular asset, gets cached, and components stay readable.
+  - **Header has no props.** Mode toggle lives elsewhere; Header is pure branding. Easier to reuse, easier to test, no coupling to App's state.
+  - **Sticky footer via flexbox** (`min-height: 100vh` on `.App`, `flex: 1` on `<main>`). Works without JS and without measuring page height.
+  - **`target="_blank"` + `rel="noopener noreferrer"`** on the TMDb link — security best practice for external links.
+  - **TMDb attribution wording** matches their public-facing requirement: "This product uses the TMDb API but is not endorsed or certified by TMDb."
+- **Tradeoff:** Modal is rendered as a sibling of `<main>` and `<Footer>`, not inside `<main>`. Keeps the modal's `position: fixed` overlay above everything regardless of where the user has scrolled.
 
 ### Pending milestones
 - **AI insight:** Provider choice + prompt finalized; rendered inside MovieModal as a new section below the overview.

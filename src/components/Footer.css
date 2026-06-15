@@ -1,0 +1,30 @@
+.footer {
+  background-color: #282c34;
+  color: #c4c8d0;
+  padding: 24px 20px;
+  margin-top: 40px;
+  text-align: center;
+  font-size: 0.85rem;
+  line-height: 1.5;
+}
+
+.footer__copy {
+  margin: 0 0 6px;
+  color: #fff;
+}
+
+.footer__attribution {
+  margin: 0;
+  max-width: 640px;
+  margin-left: auto;
+  margin-right: auto;
+}
+
+.footer__link {
+  color: #ffe0e0;
+  text-decoration: underline;
+}
+
+.footer__link:hover {
+  color: #fff;
+}

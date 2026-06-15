@@ -1,38 +1,28 @@
 .App {
   text-align: center;
-}
-
-.App-header {
-  background-color: #282c34;
   display: flex;
-  flex-direction: row;
-  align-items: center;
-  justify-content: space-evenly;
-  color: white;
-  padding: 20px;
+  flex-direction: column;
+  min-height: 100vh;
 }
 
-.App-header__nav {
+.App-main {
+  flex: 1;
+}
+
+.App-toolbar {
+  display: flex;
+  justify-content: center;
+  padding: 16px 16px 0;
+}
+
+.App-toolbar__nav {
   padding: 8px 18px;
   font-size: 0.95rem;
   border-radius: 6px;
   cursor: pointer;
 }
 
-.App-header__nav:disabled {
+.App-toolbar__nav:disabled {
   opacity: 0.5;
   cursor: default;
-}
-
-@media (max-width: 600px) {
-  .App-header {
-    padding: 14px;
-    flex-wrap: wrap;
-    gap: 8px;
-  }
-
-  .App-header h1 {
-    font-size: 1.3rem;
-    margin: 0;
-  }
 }

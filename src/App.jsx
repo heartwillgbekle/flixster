@@ -1,5 +1,7 @@
 import { useEffect, useMemo, useState } from 'react'
 import './App.css'
+import Header from './components/Header'
+import Footer from './components/Footer'
 import MovieList from './components/MovieList'
 import SearchBar from './components/SearchBar'
 import SortControl from './components/SortControl'
@@ -104,31 +106,34 @@ const App = () => {
 
   return (
     <div className="App">
-      <header className="App-header">
-        <h1>Flixster</h1>
-        <button
-          type="button"
-          className="App-header__nav"
-          onClick={handleClear}
-          disabled={mode === 'now_playing'}
-        >
-          Now Playing
-        </button>
-      </header>
-      <SearchBar
-        activeQuery={mode === 'search' ? searchQuery : ''}
-        onSearch={handleSearch}
-        onClear={handleClear}
-      />
-      <SortControl sortOption={sortOption} onSortChange={setSortOption} />
-      <MovieList
-        movies={sortedMovies}
-        isLoading={isLoading}
-        error={error}
-        hasMore={hasMore}
-        onLoadMore={handleLoadMore}
-        onCardClick={handleCardClick}
-      />
+      <Header />
+      <main className="App-main">
+        <div className="App-toolbar">
+          <button
+            type="button"
+            className="App-toolbar__nav"
+            onClick={handleClear}
+            disabled={mode === 'now_playing'}
+          >
+            Now Playing
+          </button>
+        </div>
+        <SearchBar
+          activeQuery={mode === 'search' ? searchQuery : ''}
+          onSearch={handleSearch}
+          onClear={handleClear}
+        />
+        <SortControl sortOption={sortOption} onSortChange={setSortOption} />
+        <MovieList
+          movies={sortedMovies}
+          isLoading={isLoading}
+          error={error}
+          hasMore={hasMore}
+          onLoadMore={handleLoadMore}
+          onCardClick={handleCardClick}
+        />
+      </main>
+      <Footer />
       {selectedMovieId !== null && (
         <MovieModal
           details={details}
