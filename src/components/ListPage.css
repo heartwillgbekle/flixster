@@ -1,0 +1,72 @@
+/*
+ * Visual intent: a focused destination page for a single curated list.
+ * Heading + count read at the top; either the existing MovieList grid
+ * follows, or a friendly empty state nudges the user back to discovery.
+ */
+
+.list-page {
+  padding: 24px 32px 40px;
+  max-width: 1400px;
+  margin: 0 auto;
+  text-align: left;
+}
+
+.list-page__header {
+  margin-bottom: 18px;
+}
+
+.list-page__title {
+  margin: 0 0 6px;
+  font-size: 2rem;
+  font-weight: 900;
+  letter-spacing: -0.5px;
+  color: var(--text-title);
+  line-height: 1.1;
+}
+
+.list-page__description {
+  margin: 0 0 6px;
+  font-size: 0.95rem;
+  color: var(--text-body);
+}
+
+.list-page__count {
+  margin: 0;
+  font-size: 0.78rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 1.2px;
+  color: var(--accent-yellow);
+}
+
+.list-page__empty {
+  padding: 60px 24px;
+  text-align: center;
+  border: 1px dashed var(--border-subtle);
+  border-radius: var(--radius-lg);
+  background-color: var(--bg-card);
+  margin-top: 16px;
+}
+
+.list-page__empty-title {
+  margin: 0 0 8px;
+  font-size: 1.2rem;
+  font-weight: 700;
+  color: var(--text-title);
+}
+
+.list-page__empty-text {
+  margin: 0;
+  font-size: 0.95rem;
+  color: var(--text-body);
+}
+
+@media (max-width: 600px) {
+  .list-page {
+    padding: 16px 16px 32px;
+  }
+
+  .list-page__title {
+    font-size: 1.5rem;
+  }
+}

@@ -7,12 +7,101 @@
 
 .App-main {
   flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
 }
 
 .App-toolbar {
   display: flex;
-  justify-content: center;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
   padding: 20px 16px 0;
+  flex-wrap: wrap;
+}
+
+.App-toolbar__sidebar-toggle {
+  width: 40px;
+  height: 40px;
+  padding: 0;
+  border-radius: var(--radius-sm);
+  background-color: transparent;
+  border: 1px solid var(--border-subtle);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  transition: border-color 0.2s ease, background-color 0.2s ease;
+}
+
+.App-toolbar__sidebar-toggle:hover {
+  border-color: var(--accent-purple);
+  background-color: rgba(69, 0, 157, 0.12);
+}
+
+.App-toolbar__sidebar-toggle.is-open {
+  border-color: var(--accent-purple);
+  background-color: rgba(69, 0, 157, 0.18);
+}
+
+.App-toolbar__bars {
+  position: relative;
+  width: 18px;
+  height: 14px;
+  display: inline-block;
+}
+
+.App-toolbar__bars span {
+  position: absolute;
+  left: 0;
+  width: 100%;
+  height: 2px;
+  background-color: var(--text-title);
+  border-radius: 2px;
+  transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1),
+    opacity 0.2s ease,
+    top 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.App-toolbar__bars span:nth-child(1) {
+  top: 0;
+}
+.App-toolbar__bars span:nth-child(2) {
+  top: 6px;
+}
+.App-toolbar__bars span:nth-child(3) {
+  top: 12px;
+}
+
+.App-toolbar__sidebar-toggle.is-open .App-toolbar__bars span:nth-child(1) {
+  top: 6px;
+  transform: rotate(45deg);
+}
+.App-toolbar__sidebar-toggle.is-open .App-toolbar__bars span:nth-child(2) {
+  opacity: 0;
+}
+.App-toolbar__sidebar-toggle.is-open .App-toolbar__bars span:nth-child(3) {
+  top: 6px;
+  transform: rotate(-45deg);
+}
+
+.App-sidebar-scrim {
+  position: fixed;
+  inset: 0;
+  background-color: rgba(10, 0, 25, 0.55);
+  backdrop-filter: blur(2px);
+  -webkit-backdrop-filter: blur(2px);
+  z-index: 940;
+  animation: scrim-fade-in 0.22s ease-out;
+}
+
+@keyframes scrim-fade-in {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
 }
 
 .App-toolbar__nav {
@@ -23,6 +112,7 @@
   background-color: transparent;
   color: var(--text-title);
   border: 1px solid var(--accent-purple);
+  margin-left: auto;
 }
 
 .App-toolbar__nav:hover:not(:disabled) {

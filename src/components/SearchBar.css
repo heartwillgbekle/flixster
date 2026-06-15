@@ -1,29 +1,27 @@
 /*
- * Visual intent: minimal, focused search row. Dark input with a yellow
- * focus ring matches the cinematic palette and signals interactivity
- * without competing with the movie grid below.
+ * Visual intent: pill-shaped search bar that sits in the header. Fully
+ * rounded edges (border-radius: 999px) read as a friendly, modern
+ * search affordance. Compact buttons keep the bar inline with the brand.
  */
 
 .search-bar {
   display: flex;
-  gap: 10px;
-  justify-content: center;
+  gap: 8px;
   align-items: center;
-  padding: 20px 16px;
+  width: 100%;
   flex-wrap: nowrap;
 }
 
 .search-bar__input {
   flex: 1 1 auto;
   min-width: 0;
-  max-width: 480px;
-  padding: 11px 16px;
+  padding: 10px 18px;
   font-size: 0.95rem;
   font-family: inherit;
   background-color: var(--bg-card);
   color: var(--text-title);
   border: 1px solid var(--border-subtle);
-  border-radius: var(--radius-sm);
+  border-radius: 999px;
   transition: var(--transition-smooth);
 }
 
@@ -39,10 +37,10 @@
 
 .search-bar__button {
   flex-shrink: 0;
-  padding: 11px 22px;
-  font-size: 0.95rem;
+  padding: 10px 20px;
+  font-size: 0.9rem;
   font-weight: 600;
-  border-radius: var(--radius-sm);
+  border-radius: 999px;
   background-color: var(--accent-purple);
   color: var(--text-title);
 }
@@ -63,19 +61,14 @@
   border-color: var(--text-body);
 }
 
-@media (max-width: 600px) {
-  .search-bar {
-    padding: 12px 12px 8px;
-    gap: 6px;
-  }
-
+@media (max-width: 720px) {
   .search-bar__input {
-    padding: 8px 12px;
-    font-size: 0.9rem;
+    padding: 8px 14px;
+    font-size: 0.88rem;
   }
 
   .search-bar__button {
-    padding: 8px 12px;
-    font-size: 0.85rem;
+    padding: 8px 14px;
+    font-size: 0.82rem;
   }
 }

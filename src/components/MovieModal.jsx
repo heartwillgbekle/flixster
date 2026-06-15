@@ -21,10 +21,18 @@ const formatReleaseDate = (date) => {
   });
 };
 
-const MovieModal = ({ details, isLoading, error, onClose }) => {
+const MovieModal = ({ details, trailer, isLoading, error, onClose }) => {
   const [aiInsight, setAiInsight] = useState(null);
   const [loadingInsight, setLoadingInsight] = useState(false);
   const [aiError, setAiError] = useState(null);
+  const [showTrailer, setShowTrailer] = useState(false);
+
+  useEffect(() => {
+    setShowTrailer(false);
+    if (!trailer?.key) return;
+    const id = setTimeout(() => setShowTrailer(true), 1500);
+    return () => clearTimeout(id);
+  }, [trailer?.key]);
 
   useEffect(() => {
     const handleKey = (e) => {
@@ -102,13 +110,25 @@ const MovieModal = ({ details, isLoading, error, onClose }) => {
 
         {details && !isLoading && !error && (
           <>
-            {details.backdrop_path && (
-              <img
-                className="movie-modal__backdrop-image"
-                src={`${BACKDROP_BASE}${details.backdrop_path}`}
-                alt=""
-              />
-            )}
+            <div className="movie-modal__media">
+              {showTrailer && trailer?.key ? (
+                <iframe
+                  key={trailer.key}
+                  className="movie-modal__trailer"
+                  src={`https://www.youtube.com/embed/${trailer.key}?autoplay=1&loop=1&playlist=${trailer.key}&controls=0&modestbranding=1&rel=0&iv_load_policy=3&disablekb=1&fs=0&playsinline=1`}
+                  title={`${details.title} trailer: ${trailer.name}`}
+                  allow="autoplay; encrypted-media; picture-in-picture"
+                />
+              ) : (
+                details.backdrop_path && (
+                  <img
+                    className="movie-modal__backdrop-image"
+                    src={`${BACKDROP_BASE}${details.backdrop_path}`}
+                    alt=""
+                  />
+                )
+              )}
+            </div>
             <div className="movie-modal__body">
               <h2 className="movie-modal__title">{details.title}</h2>
               {details.tagline && (

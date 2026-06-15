@@ -5,11 +5,13 @@
 ### Hierarchy
 ```
 App
-├── Header
-├── SearchBar
-├── SortControl
-├── MovieList
-│   └── MovieCard (×N)
+├── Header (with SearchBar in actions slot)
+├── App-main
+│   ├── App-toolbar (☰ hamburger + Now Playing toggle)
+│   ├── Sidebar (slide-in drawer with nav: Home / Favorites / Watched)
+│   ├── view = "home"      → SortControl + MovieList → MovieCard (×N)
+│   ├── view = "favorites" → ListPage → MovieList → MovieCard (×N)
+│   └── view = "watched"   → ListPage → MovieList → MovieCard (×N)
 ├── MovieModal (conditional)
 └── Footer
 ```
@@ -44,19 +46,20 @@ App
 #### MovieList
 - **Responsibility:** Render a grid of movie cards plus a "Load More" button. Pure presentation — no fetching.
 - **Renders:** A list of `MovieCard` components, a Load More button (when `hasMore`), and inline status messages (loading, error, empty).
-- **Props:** `movies: Movie[]`, `onLoadMore: () => void`, `hasMore: boolean`, `isLoading: boolean`, `error: string | null`, `onCardClick: (id: number) => void` (forwarded to each MovieCard).
+- **Props:** `movies`, `onLoadMore`, `hasMore`, `isLoading`, `error`, `onCardClick`, `favorites: Set<number>`, `watched: Set<number>`, `onToggleFavorite`, `onToggleWatched` — favorites/watched are forwarded as Sets so each card can do an O(1) `.has(id)` lookup.
 - **State:** None — pure presentation of data passed in.
 
 #### MovieCard
-- **Responsibility:** Display a single movie's poster, title, and rating; trigger modal open via `onClick(id)`.
-- **Renders:** Poster `<img>`, title, vote average. Whole card is a `<button>` so click + keyboard activation work.
-- **Props:** `movie: { id, title, poster_path, vote_average, release_date }`, `onClick: (id: number) => void`.
-- **State:** None.
+- **Responsibility:** Display a single movie's poster, title, and rating; trigger modal open via `onClick(id)`; expose toggleable favorite (heart) and watched controls.
+- **Renders:** Poster `<img>`, title, vote average, heart icon overlaid on the poster, "Mark as watched" / "✓ Watched" toggle button below the rating.
+- **Props:** `movie`, `onClick: (id) => void`, `isFavorite: boolean`, `isWatched: boolean`, `onToggleFavorite: (id) => void`, `onToggleWatched: (id) => void`.
+- **State:** None — favorite/watched status is owned by App; card just reflects the `isFavorite` / `isWatched` props.
+- **Note:** Card root is a `<div role="button" tabIndex={0}>` rather than `<button>` so the inner heart + watched `<button>` elements aren't nested inside another button (invalid HTML). Keyboard handler maps Enter/Space to the open action; child buttons call `e.stopPropagation()` so toggling doesn't open the modal.
 
 #### MovieModal
-- **Responsibility:** Display full movie details (backdrop, title, release date, runtime, genres, overview) and the AI insight. **Pure presentation** — receives details as a prop, does not fetch.
-- **Renders:** Backdrop image, title, tagline (if present), release date + runtime row, genre chip list, overview, AI insight (later), close button. Inline loading and error states.
-- **Props:** `details: MovieDetails | null`, `isLoading: boolean`, `error: string | null`, `onClose: () => void`.
+- **Responsibility:** Display full movie details (backdrop, title, release date, runtime, genres, overview), the AI insight, and the YouTube trailer. **Pure presentation for movie data** — receives `details` and `trailer` as props, does not fetch them.
+- **Renders:** Media slot (backdrop image first, swaps to YouTube trailer iframe 1.5s after mount when one is available), title, tagline (if present), release date + runtime row, genre chip list, overview, AI insight, close button. Inline loading and error states.
+- **Props:** `details: MovieDetails | null`, `trailer: { key, name } | null`, `isLoading: boolean`, `error: string | null`, `onClose: () => void`.
 - **State:** None for movie data (App owns it). Owns AI-related state — `aiInsight` (string or null), `loadingInsight` (boolean), `aiError` (string or null) — since the recommendation is scoped to this modal's lifetime and resets when a new movie is selected.
 - **Open trigger:** App renders `<MovieModal>` only when `selectedMovieId !== null`. App's click handler (`handleCardClick`) sets `selectedMovieId` when MovieCard's `onClick(id)` fires (propagated up through MovieList).
 - **Close triggers (all call `onClose`, which sets `selectedMovieId = null` in App):**
@@ -70,6 +73,19 @@ App
 - **Renders:** © {currentYear} Flixster + a paragraph attributing data to The Movie Database with an external link to https://www.themoviedb.org/ and the standard "not endorsed by TMDb" disclaimer.
 - **Props:** None.
 - **State:** None (year is computed at module load).
+
+#### Sidebar
+- **Responsibility:** Slide-in navigation drawer. Routes the user between three views: Home (movie grid), Favorites, Watched. Does NOT render the lists themselves anymore — those have moved to dedicated `ListPage` views.
+- **Renders:** "My Lists" heading + three nav buttons (Home, Favorites, Watched). Favorites and Watched display a count badge; the active view gets a purple-tinted background.
+- **Props:** `id`, `isOpen: boolean`, `view: "home" | "favorites" | "watched"`, `onNavigate: (view) => void`, `favoritesCount: number`, `watchedCount: number`.
+- **State:** None — fully controlled by App.
+- **UX:** Drawer is `position: fixed` and slides in from the left with a 320ms cubic-bezier transform. A scrim with `backdrop-filter: blur(2px)` dims the rest of the page behind it. Clicking a nav item closes the drawer and switches the view in one action.
+
+#### ListPage
+- **Responsibility:** Single destination page for a curated list (Favorites or Watched). Generic — receives the list data and labels as props.
+- **Renders:** A page header (title + description + count) and either a `<MovieList>` of the movies or an empty-state card with `emptyTitle` + `emptyText`.
+- **Props:** `title`, `description`, `emptyTitle`, `emptyText`, `movies: Movie[]`, `onCardClick`, `favorites: Set`, `watched: Set`, `onToggleFavorite`, `onToggleWatched`.
+- **State:** None — pure presentation. Reuses `<MovieList>` so cards keep the same hover effects, heart icon, and watched toggle behavior they have on Home.
 
 ---
 
@@ -107,6 +123,19 @@ App
   - **401** — bad/missing API key → same fallback; log a warning so it's debuggable
   - **Network failure** — show "Could not load details. Try again." with retry button
   - **Missing optional fields** (`runtime: null`, empty `genres`, missing `backdrop_path`) — render gracefully (`Runtime unknown`, omit genre row, fall back to a solid-color modal header instead of a backdrop image)
+
+### 2.5 Movie Videos (for trailer playback)
+- **Endpoint:** `GET /movie/{movie_id}/videos`
+- **Required params:** `api_key`, `language=en-US`
+- **Response shape:** `{ results: [{ name, key, site, type, official, published_at, ... }] }`
+- **Picker logic** (`pickBestTrailer` in [tmdb.js](src/api/tmdb.js)):
+  1. Filter to `site === "YouTube"` with a non-empty `key`.
+  2. Filter to `type` ∈ {`Trailer`, `Teaser`}. (Skip Clips — those are scene-specific spoilers.)
+  3. Sort: Trailers before Teasers → `official: true` first → newest `published_at` first.
+  4. Return `{ key, name } | null`.
+- **Error cases:**
+  - **Network failure / 404 / 401** — return `null` silently; modal shows backdrop image instead. Trailer is additive UX, not load-bearing.
+  - **No matching video** — same as above; backdrop stays.
 
 ### 2.4 AI Insight — OpenRouter
 - **Endpoint:** `POST https://openrouter.ai/api/v1/chat/completions`
@@ -147,10 +176,16 @@ App
 | `isLoading` | `boolean` | `false` | App | Set true before fetch, false on resolve/reject |
 | `error` | `string \| null` | `null` | App | Set on fetch failure; cleared on next attempt |
 | `hasMore` | `boolean` | `true` | App | Set from `page < total_pages` after fetch |
+| `favorites` | `Set<number>` | `new Set()` | App | Heart toggle on a MovieCard. Session-only — not persisted across reloads. |
+| `watched` | `Set<number>` | `new Set()` | App | "Mark as watched" toggle on a MovieCard. Session-only. |
+| `view` | `"home" \| "favorites" \| "watched"` | `"home"` | App | Sidebar nav clicks set this. `handleSearch` and `handleClear` both reset it to `"home"` so search results / Now Playing always land on the grid. |
+| `isSidebarOpen` | `boolean` | `false` | App | Hamburger button toggles. Auto-closes on nav click and on scrim click. |
 | `inputValue` | `string` | `""` | SearchBar | Every keystroke (controlled input) |
 | `details` | `MovieDetails \| null` | `null` | App | Set after `getMovieDetails(selectedMovieId)` resolves; cleared when modal closes |
+| `trailer` | `{ key, name } \| null` | `null` | App | Set after `getMovieVideos` resolves and `pickBestTrailer` selects one; `null` if no trailer found or fetch fails |
 | `isLoadingDetails` | `boolean` | `false` | App | True during details fetch |
 | `detailsError` | `string \| null` | `null` | App | Set if details fetch fails; cleared when a new movie is selected |
+| `showTrailer` | `boolean` | `false` | MovieModal | Flips to `true` 1.5s after a trailer-bearing modal mounts; gates the iframe render so the backdrop image displays first |
 | `aiInsight` | `string \| null` | `null` | MovieModal | Set to trimmed response text on successful OpenRouter call |
 | `loadingInsight` | `boolean` | `false` | MovieModal | True while OpenRouter request is in flight |
 | `aiError` | `string \| null` | `null` | MovieModal | Set on AI failure (network, 4xx/5xx, empty response); UI renders friendly fallback |
@@ -436,3 +471,39 @@ A running log of what shipped per milestone, what diverged from the original pla
   - **Streaming responses** — `max_tokens: 200` makes the call short enough that streaming wouldn't meaningfully improve perceived latency.
   - **Per-movie caching** — refetching on every modal open is fine at this volume; would matter only with heavy reuse.
   - **Retry logic** — single-shot for now; rate-limit responses surface as the friendly fallback rather than auto-retrying.
+
+### Milestone 9 — Favorites + Watched + Sidebar
+- **Built:** Heart icon (♡/♥) overlaid on each [`MovieCard`](src/components/MovieCard.jsx) poster + a "Mark as watched" / "✓ Watched" toggle button below the rating. New [`Sidebar`](src/components/Sidebar.jsx) component renders Favorites and Watched lists with thumbnail + title, count badges, and click-to-open behavior. App holds both lists as `Set<number>` for O(1) lookups; Sidebar receives derived `Movie[]` arrays via `useMemo` over the current `movies` list.
+- **App-shell layout:** Wrapped main content in `.App-shell` (flex row) so Sidebar sits on the left and `<main>` flexes to fill. Below 900px the shell switches to a stacked column with the sidebar capped at 240px and internally scrollable.
+- **Decisions worth keeping:**
+  - **Sets for membership, derived arrays for rendering.** Toggling is `O(1)` via `Set.has` / `Set.add` / `Set.delete`; sidebar entries are computed via `movies.filter(m => favorites.has(m.id))` inside a `useMemo`. Cleanest of both worlds.
+  - **MovieCard root changed from `<button>` to `<div role="button" tabIndex={0}>`.** Nested `<button>`s (heart + watched inside the card) are invalid HTML. Manual keyboard handler maps Enter/Space to the open action; child buttons call `e.stopPropagation()` so toggling never opens the modal.
+  - **Sidebar uses `Movie[]`, MovieList uses `Set<number>`.** Different shape per consumer's need — sidebar needs to render thumbnails (full object), MovieList only needs to know if each card is favorite/watched (Set suffices).
+  - **Functional state updates with `new Set(prev)`** — must clone before mutating; otherwise React's referential equality check sees the same reference and skips the re-render.
+  - **Clicking a sidebar entry opens that movie's modal** via the existing `handleCardClick` flow — single code path for "open movie X."
+- **Per-milestone-spec:** Favorites and watched status are session-only (reset on reload). No localStorage / persistence.
+- **Tradeoff to remember:** A favorited movie that scrolls out of the loaded `movies` array (e.g., user marks it, switches to search, original list isn't reloaded) won't appear in the sidebar. Acceptable for the session-only scope; would need a separate `favoriteMoviesById` cache to fix once persistence lands.
+
+### Milestone 10 — YouTube Trailer Playback
+- **Built:** New `getMovieVideos(movieId)` + `pickBestTrailer(videos)` helpers in [`tmdb.js`](src/api/tmdb.js). App fetches videos in parallel with details when `selectedMovieId` changes; the picked trailer is stored in App state and passed to MovieModal as a `trailer` prop. Modal media slot now shows the backdrop image first, then swaps to a YouTube `<iframe>` 1.5s after mount when a trailer exists. Modal `max-width` bumped from 720px → 880px.
+- **Picker rules:** YouTube only → Trailers before Teasers (Clips excluded as spoilers) → official first → newest first. Falls through to `null` if nothing matches.
+- **Decisions worth keeping:**
+  - **Trailer fetch is fire-and-forget.** Failure path is `setTrailer(null)` — modal shows the backdrop and nothing else changes. Trailer is additive UX, never load-bearing.
+  - **`showTrailer` is local to MovieModal.** App owns whether a trailer *exists*; the modal owns the *delay* before swapping. Cleanest division: data ownership in App, presentation timing in the component that does the presenting.
+  - **Effect keyed on `trailer?.key`** — switching movies remounts the modal anyway, but this is defensive: if the trailer prop ever changed without a remount, the timer resets cleanly.
+  - **`autoplay=1` in the embed URL** — YouTube only honors muted autoplay across browsers; users may need to unmute. Acceptable: the 1.5s delay creates a moment where they expect motion, and the cinematic dim around the modal makes muted-then-unmute a natural action rather than a jarring one.
+  - **`<iframe key={trailer.key}>`** — guarantees a fresh embed when the trailer prop changes mid-modal (e.g., if we later let users pick alternate trailers); without `key`, React would mutate the existing iframe's `src` and YouTube's player handles that poorly.
+  - **`pointer-events` not blocked** — modal's existing `body { overflow: hidden }` doesn't prevent iframe interaction; fullscreen and player controls still work.
+- **Tradeoff:** YouTube embeds load ~500KB of player JS lazily once the iframe mounts. Acceptable for this UX (user opted into the modal, motion is expected); a `loading="lazy"` attribute would help if the iframe ever became scroll-revealed instead of always above-the-fold.
+
+### Milestone 11 — Tabs / Routing for Favorites + Watched
+- **Built:** Sidebar refactored from a list-displaying drawer into a **navigation drawer** with three nav buttons (Home, Favorites, Watched). New generic [`ListPage`](src/components/ListPage.jsx) component renders a curated list with header + count + (movies grid OR empty state). App keeps a `view` state var (`"home" | "favorites" | "watched"`) and conditionally renders either the home grid (with SortControl) or a `<ListPage>`.
+- **Routing without a router:** Used a simple state-driven view switch instead of pulling in `react-router-dom`. For three top-level views with no URL persistence requirement, a `view` state var is meaningfully simpler — no provider tree, no `<Route>` config, no URL-encoding of state, no library to learn.
+- **Decisions worth keeping:**
+  - **Single ListPage component for both Favorites and Watched** — same header/count/empty-state shape, just different labels and data. Saves code duplication and makes adding a third list (e.g., "Watch Later") a one-line change in App.
+  - **Active nav state via `aria-current="page"`** — semantic, screen-reader friendly, and the CSS hooks off the same attribute via `.is-active` class for the visual treatment.
+  - **`handleSearch` and `handleClear` both reset `view` to `"home"`** — search results should always land on the grid, never on a list page. Same for "Now Playing." Without this reset, hitting Enter in the search bar while on the Favorites page would fetch search results into a hidden state.
+  - **Sidebar auto-closes on navigation** — single user action does both: switch view and dismiss drawer. Less click overhead.
+  - **Now Playing button stays enabled when on a list page** even if `mode === 'now_playing'`, so users always have a way back to the grid via the toolbar.
+- **What was removed:** The thumbnail-and-title list of saved movies that previously lived in the sidebar. Users now see those movies on the dedicated page rather than a peek-list inside the drawer. Trade-off: one extra click to see a saved movie, but the dedicated page has full poster cards instead of cramped thumbnails.
+- **Tradeoff:** No deep linking. Reloading on `/favorites` won't actually preserve that view — the `view` state resets to `"home"`. Acceptable since Favorites/Watched are session-only anyway (reload clears them too).

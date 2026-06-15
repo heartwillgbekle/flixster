@@ -27,3 +27,26 @@ export const searchMovies = (query, page = 1) =>
 
 export const getMovieDetails = (movieId) =>
   tmdbFetch(`/movie/${movieId}`);
+
+export const getMovieVideos = (movieId) =>
+  tmdbFetch(`/movie/${movieId}/videos`);
+
+const TYPE_RANK = { Trailer: 0, Teaser: 1 };
+
+export const pickBestTrailer = (videos = []) => {
+  const candidates = videos
+    .filter((v) => v.site === 'YouTube' && v.key)
+    .filter((v) => TYPE_RANK[v.type] !== undefined);
+
+  if (candidates.length === 0) return null;
+
+  candidates.sort((a, b) => {
+    const typeDiff = TYPE_RANK[a.type] - TYPE_RANK[b.type];
+    if (typeDiff !== 0) return typeDiff;
+    if (a.official !== b.official) return a.official ? -1 : 1;
+    return new Date(b.published_at) - new Date(a.published_at);
+  });
+
+  const best = candidates[0];
+  return { key: best.key, name: best.name };
+};

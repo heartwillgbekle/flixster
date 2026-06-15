@@ -1,26 +1,30 @@
 /*
- * Visual intent: dramatic full-width header. Logo + wordmark form a tight
- * lockup; a thin yellow accent line on hover gives the brand a heartbeat.
+ * Visual intent: full-width header with brand on the left (logo + name +
+ * tagline as a vertical lockup) and an actions slot on the right that
+ * holds the search bar. Layout collapses to stacked on narrow viewports.
  */
 
 .header {
   background-color: var(--bg-main);
-  padding: 32px 24px 24px;
+  padding: 24px 32px;
   display: flex;
   align-items: center;
-  justify-content: center;
+  justify-content: space-between;
+  gap: 24px;
   border-bottom: 1px solid var(--border-subtle);
+  flex-wrap: wrap;
 }
 
 .header__brand {
   display: flex;
   align-items: center;
-  gap: 16px;
+  gap: 14px;
+  flex-shrink: 0;
 }
 
 .header__logo {
-  width: 56px;
-  height: 56px;
+  width: 52px;
+  height: 52px;
   display: block;
   flex-shrink: 0;
   filter: drop-shadow(0 0 12px var(--accent-purple-soft));
@@ -34,7 +38,7 @@
 
 .header__title {
   margin: 0;
-  font-size: 2rem;
+  font-size: 1.8rem;
   font-weight: 900;
   letter-spacing: -0.5px;
   color: var(--text-title);
@@ -42,28 +46,43 @@
 }
 
 .header__tagline {
-  margin: 4px 0 0;
-  font-size: 0.9rem;
+  margin: 2px 0 0;
+  font-size: 0.85rem;
   font-weight: 500;
   color: var(--accent-yellow);
   letter-spacing: 0.3px;
 }
 
-@media (max-width: 600px) {
+.header__actions {
+  display: flex;
+  align-items: center;
+  flex: 1 1 320px;
+  max-width: 560px;
+  justify-content: flex-end;
+}
+
+@media (max-width: 720px) {
   .header {
-    padding: 20px 16px 16px;
+    padding: 16px 18px;
+    gap: 14px;
   }
 
   .header__logo {
-    width: 42px;
-    height: 42px;
+    width: 40px;
+    height: 40px;
   }
 
   .header__title {
-    font-size: 1.5rem;
+    font-size: 1.4rem;
   }
 
   .header__tagline {
-    font-size: 0.8rem;
+    font-size: 0.78rem;
+  }
+
+  .header__actions {
+    width: 100%;
+    flex: 1 1 100%;
+    justify-content: stretch;
   }
 }
