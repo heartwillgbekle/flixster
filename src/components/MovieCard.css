@@ -31,9 +31,15 @@
 
 .movie-card__title {
   margin: 0 0 6px 0;
-  font-size: 1rem;
+  font-size: 0.95rem;
   line-height: 1.3;
   color: #222;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+  word-break: break-word;
+  min-height: 2.5em;
 }
 
 .movie-card__rating {

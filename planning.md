@@ -155,6 +155,20 @@ App
 
 ---
 
+## 4.5 Responsive Breakpoints
+
+Two breakpoints split the layout into three sizes. The list uses **flexbox** (`display: flex; flex-wrap: wrap`) and each card uses `flex: 1 1 <basis>` with a `max-width` cap. The basis controls the target card width per breakpoint; `flex-grow` lets cards stretch to fill rows, and `max-width` prevents orphan cards on the last row from blowing up to full width.
+
+| Range | Card flex-basis | Card max-width | Approx cards/row | Gap | Padding |
+|---|---|---|---|---|---|
+| Mobile (`< 600px`) | 140px | 200px | ~2 | 12px | 12px |
+| Tablet (`600px – 1023px`) | 170px | 220px | ~3–5 | 16px | 20px |
+| Desktop (`≥ 1024px`) | 200px | 240px | ~5–7 | 24px | 32px |
+
+**Approach:** mobile-first base styles, then `@media (min-width: 600px)` and `@media (min-width: 1024px)` overrides. Card typography stays the same size across breakpoints — the layout does the work. List width capped at 1400px and centered to avoid sparse rows on ultra-wide monitors.
+
+---
+
 ## 5. AI Feature Spec
 
 ### Goal

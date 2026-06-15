@@ -1,10 +1,49 @@
+/*
+ * Responsive flex grid — mobile-first.
+ *   < 600px  : ~2 cards/row, basis 140px, 12px gap
+ *   600–1023 : ~3–5 cards/row, basis 170px, 16px gap
+ *   ≥ 1024   : ~5–7 cards/row, basis 200px, 24px gap
+ * Cards use flex-basis to control row count; max-width caps orphan cards
+ * on the last row so they don't stretch to fill the whole row.
+ * Max content width 1400px, centered.
+ */
+
 .movie-list {
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
-  gap: 20px;
-  padding: 24px;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+  padding: 12px;
   max-width: 1400px;
   margin: 0 auto;
+}
+
+.movie-list .movie-card {
+  flex: 1 1 140px;
+  max-width: 200px;
+}
+
+@media (min-width: 600px) {
+  .movie-list {
+    gap: 16px;
+    padding: 20px;
+  }
+
+  .movie-list .movie-card {
+    flex: 1 1 170px;
+    max-width: 220px;
+  }
+}
+
+@media (min-width: 1024px) {
+  .movie-list {
+    gap: 24px;
+    padding: 32px;
+  }
+
+  .movie-list .movie-card {
+    flex: 1 1 200px;
+    max-width: 240px;
+  }
 }
 
 .movie-list__status {
@@ -12,6 +51,7 @@
   padding: 40px;
   font-size: 1.1rem;
   color: #555;
+  width: 100%;
 }
 
 .movie-list__status--error {
@@ -22,6 +62,7 @@
   display: flex;
   justify-content: center;
   padding: 24px 0 48px;
+  width: 100%;
 }
 
 .movie-list__load-more {
@@ -29,12 +70,4 @@
   font-size: 1rem;
   border-radius: 6px;
   cursor: pointer;
-}
-
-@media (max-width: 600px) {
-  .movie-list {
-    grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
-    gap: 12px;
-    padding: 12px;
-  }
 }
