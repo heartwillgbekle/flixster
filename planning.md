@@ -57,7 +57,7 @@ App
 - **Responsibility:** Display full movie details (backdrop, title, release date, runtime, genres, overview) and the AI insight. **Pure presentation** — receives details as a prop, does not fetch.
 - **Renders:** Backdrop image, title, tagline (if present), release date + runtime row, genre chip list, overview, AI insight (later), close button. Inline loading and error states.
 - **Props:** `details: MovieDetails | null`, `isLoading: boolean`, `error: string | null`, `onClose: () => void`.
-- **State:** None for movie data (App owns it). Will own `aiInsight` + `isLoadingAi` when the AI feature is added (those are scoped to the modal's lifetime).
+- **State:** None for movie data (App owns it). Owns AI-related state — `aiInsight` (string or null), `loadingInsight` (boolean), `aiError` (string or null) — since the recommendation is scoped to this modal's lifetime and resets when a new movie is selected.
 - **Open trigger:** App renders `<MovieModal>` only when `selectedMovieId !== null`. App's click handler (`handleCardClick`) sets `selectedMovieId` when MovieCard's `onClick(id)` fires (propagated up through MovieList).
 - **Close triggers (all call `onClose`, which sets `selectedMovieId = null` in App):**
   - Click on the close button (×) in the modal header
@@ -108,22 +108,29 @@ App
   - **Network failure** — show "Could not load details. Try again." with retry button
   - **Missing optional fields** (`runtime: null`, empty `genres`, missing `backdrop_path`) — render gracefully (`Runtime unknown`, omit genre row, fall back to a solid-color modal header instead of a backdrop image)
 
-### 2.4 AI Insight (LLM provider — TBD)
-- **Endpoint:** `POST <provider chat/completion endpoint>` — exact provider/URL chosen at Milestone 8.
-- **Auth:** Bearer token or API key in request headers, sourced from a dedicated env var (e.g., `VITE_AI_API_KEY`), separate from the TMDb key.
-- **Required body params (typical shape):**
-  - `model` — model identifier
-  - `max_tokens` (or equivalent) — capped low (~200) since output is 2–3 sentences
-  - `messages` / `prompt` — user prompt built from `{title, genres, overview}` (see Section 5)
-- **Response fields used:** Whatever field carries the generated text (e.g., `content[0].text`, `choices[0].message.content`) — extract a single string.
+### 2.4 AI Insight — OpenRouter
+- **Endpoint:** `POST https://openrouter.ai/api/v1/chat/completions`
+- **Auth:** `Authorization: Bearer ${import.meta.env.VITE_OPENROUTER_API_KEY}`
+- **Recommended headers (per OpenRouter docs):**
+  - `Authorization: Bearer <key>`
+  - `Content-Type: application/json`
+  - `HTTP-Referer: <site URL>` (optional — improves rate limits / attribution)
+  - `X-Title: Flixster` (optional)
+- **Required body params:**
+  - `model` — `"openai/gpt-oss-120b:free"` (primary)
+  - `messages` — array of `{ role, content }` (system prompt + user prompt; see Section 5 for full text)
+  - `max_tokens` — `200` (output is 2–3 sentences)
+  - `temperature` — `0.7` (some warmth, but not unhinged)
+- **Response shape (OpenAI-compatible):** `{ choices: [{ message: { content: string } }] }` — extract `data.choices[0].message.content`, then `.trim()`.
 - **Error cases:**
-  - 401 / bad key → hide AI section, log warning
-  - 429 / rate limit → show "AI insight unavailable, try again later"
-  - 5xx / overloaded → same fallback as rate limit
-  - Network failure → hide AI section silently
-  - Empty or malformed response → fall back to "No insight generated"
+  - **401** — bad/missing OpenRouter key → set `aiError`, show fallback message, log warning
+  - **429** — rate limit (free tier is generous but finite) → fallback message
+  - **402 / billing** — out of free credits → fallback message
+  - **5xx** — provider/upstream model down → fallback message
+  - **Network failure** — fallback message
+  - **Empty or whitespace-only `content`** — fallback message (treat as failure even though HTTP succeeded)
 
-> ⚠️ **Security note:** Calling an LLM provider directly from the browser exposes the API key to anyone who opens DevTools. Acceptable for this learning project; in production this call should be proxied through a backend that holds the key server-side.
+> ⚠️ **Security note:** Calling OpenRouter directly from the browser ships the API key to anyone who opens DevTools. Acceptable for this learning project; production would proxy through a backend that holds the key server-side.
 
 ---
 
@@ -144,8 +151,9 @@ App
 | `details` | `MovieDetails \| null` | `null` | App | Set after `getMovieDetails(selectedMovieId)` resolves; cleared when modal closes |
 | `isLoadingDetails` | `boolean` | `false` | App | True during details fetch |
 | `detailsError` | `string \| null` | `null` | App | Set if details fetch fails; cleared when a new movie is selected |
-| `aiInsight` | `string \| null` | `null` | MovieModal | Set after AI fetch (Milestone 8) |
-| `isLoadingAi` | `boolean` | `false` | MovieModal | True during AI fetch (Milestone 8) |
+| `aiInsight` | `string \| null` | `null` | MovieModal | Set to trimmed response text on successful OpenRouter call |
+| `loadingInsight` | `boolean` | `false` | MovieModal | True while OpenRouter request is in flight |
+| `aiError` | `string \| null` | `null` | MovieModal | Set on AI failure (network, 4xx/5xx, empty response); UI renders friendly fallback |
 
 **Notes:**
 - Sorting is applied client-side over `movies` (no API param) — derived value, not stored separately.
@@ -240,36 +248,91 @@ Two breakpoints split the layout into three sizes. The list uses **flexbox** (`d
 
 ---
 
-## 5. AI Feature Spec
+## 5. AI Feature Spec — "Watch Recommendation"
 
 ### Goal
-Generate a short, personable "Why you might like this" recommendation for the movie currently open in the modal.
+When the MovieModal opens, generate a 2–3 sentence AI-written recommendation that helps the user decide whether the film is worth their evening. Rendered alongside the movie details, below the overview.
 
-### Display
-- **Component:** `MovieModal` (rendered below overview, above close button).
-- **UI:** A boxed/highlighted section labeled "AI Insight" with a small loading indicator while the request is in flight.
+### Provider + Endpoint
+- **Provider:** OpenRouter (free-tier).
+- **Endpoint:** `POST https://openrouter.ai/api/v1/chat/completions`
+- **Model:** `openai/gpt-oss-120b:free` (primary — landed here after smoke-testing; Llama 3.3 free tier was upstream-rate-limited at implementation time, Gemma's free tier was retired).
+- **Auth:** `Authorization: Bearer ${VITE_OPENROUTER_API_KEY}` header. Key lives in `.env` next to the existing `VITE_API_KEY`.
 
-### Input (sent as context to the AI)
-- `title` (string)
-- `genres` (string[] — flattened from `details.genres[].name`)
-- `overview` (string)
+### Prompt Spec
 
-### Output
-- A 2–3 sentence watch recommendation in plain text.
-- Tone: enthusiastic but grounded. Mentions the genre/themes and what type of viewer would enjoy it.
+**Role.** "You are an enthusiastic but honest film critic helping a friend decide what to watch tonight."
 
-### State
-- `aiInsight: string | null` — lives in `MovieModal` local state.
-- `isLoadingAi: boolean` — true while request is in flight.
-- Cleared automatically when the modal unmounts (new movie ID = new modal instance via `key={movieId}`).
+**Task.** "Write a short watch recommendation (2–3 sentences) that gives the reader a feel for the movie's vibe and tells them who would enjoy it most."
 
-### Provider
-- LLM provider TBD — finalized at Milestone 8 based on latency, quality, and ease of integration. Whichever provider is chosen, the call goes through the contract in Section 2.4. Placeholder prompt:
-  > "In 2–3 sentences, tell me why a viewer might enjoy *{title}* — a {genres} film about: {overview}. Be specific and avoid generic phrasing."
+**System message** (sent as `messages[0]`, role `system`):
+> You are an enthusiastic but honest film critic helping a friend decide what to watch tonight. Write 2–3 sentences in the second person, focused on the movie's tone, mood, and ideal audience. Do not include plot spoilers, do not say "this movie", do not start with "I", and avoid generic phrases like "must-see", "tour de force", or "edge-of-your-seat thriller". Output plain text only — no markdown, no headings, no bullet points.
 
-### Error handling
-- On AI failure: hide the AI section silently (don't block the rest of the modal) or show "AI insight unavailable."
-- Cache by `movieId` if revisiting the same modal in one session is common (defer until measured).
+**User message** (sent as `messages[1]`, role `user`):
+> Title: `${title}`
+> Genres: `${genres.join(', ')}`
+> Overview: `${overview}`
+>
+> Recommend whether to watch this and who would enjoy it.
+
+### Inputs (assembled in MovieModal from `details` prop)
+- `title` (string) — `details.title`
+- `genres` (string) — `details.genres.map(g => g.name).join(', ')`
+- `overview` (string) — `details.overview`
+
+### Output format
+- Plain text, no markdown.
+- 2–3 sentences (cap `max_tokens` at 200).
+- Second person voice ("you'll enjoy…", "fans of X will…").
+- No spoilers, no first-person, no generic praise phrases.
+- If the model returns empty / whitespace-only text, treat as failure.
+
+### Constraints (enforced in the prompt + post-processing)
+- No plot spoilers
+- No "I" or "this movie"
+- No "must-see", "tour de force", "edge-of-your-seat", "instant classic"
+- No comparisons to other films unless they sharpen the recommendation
+- No markdown, headings, or bullets
+
+### Trigger
+- Fires when `details` becomes non-null inside MovieModal (i.e., the TMDb details fetch resolved).
+- Effect keyed on `details?.id` so a new movie selection retriggers; same movie does not re-fetch.
+- Skipped entirely when `details` is null, when the details fetch errored, or when `overview` is empty.
+
+### State (lives in MovieModal local state)
+- `aiInsight: string | null` — initial `null`, set to the trimmed response on success
+- `loadingInsight: boolean` — initial `false`, true while the request is in flight
+- `aiError: string | null` — initial `null`, set if the call fails so the UI can decide what to render
+- All three reset automatically when the modal unmounts (App passes a fresh modal instance per `selectedMovieId`).
+
+### UI / display
+- New `.movie-modal__ai` block rendered below `.movie-modal__overview`.
+- Heading: "Watch Recommendation" (small caps or yellow accent to match the meta row palette).
+- States:
+  - `loadingInsight === true` → skeleton shimmer or "Generating recommendation…"
+  - `aiInsight` set → render the text
+  - `aiError` set → friendly fallback: **"We couldn't generate a recommendation for this one — check out the overview above!"**
+
+### Failure behavior
+- Network failure / 401 / 429 / 5xx → set `aiError`, show fallback message, keep the rest of the modal functional.
+- Empty/whitespace response → treat as failure, show fallback.
+- Never block the modal on AI failure. Movie details are the primary content; the AI block is additive.
+
+### Logging
+- On error, `console.warn("AI insight failed", { movieId, status, message })` so failures are debuggable in DevTools without surfacing technical details to the user.
+
+### Security note (carried over from §2.4)
+> ⚠️ The OpenRouter API key ships to the browser via `import.meta.env`. Acceptable for this learning project; production would proxy through a backend.
+
+### AI Feature — Decisions Log
+
+- **What the API returned initially:** Smoke-tested with *The Batman* details → got: *"If you're in the mood for a brooding, rain-slick dive into Gotham's underbelly, The Batman delivers a moody, methodical mystery that rewards patience more than punch-lines. Expect a dense, atmospheric thriller where every clue feels earned — just be ready for a slower burn rather than nonstop action."* This hit the spec on first pass: 2 sentences, second-person ("you're in the mood"), no spoilers, no banned phrases ("must-see", "tour de force"), correct tone (enthusiastic but honest), no markdown. **No prompt iteration needed.**
+- **What I changed in my prompt:** Nothing in the system/user message after the first response — the spec was tight enough that the first version worked. The only change was the **model**: spec called for `meta-llama/llama-3.3-70b-instruct:free`, but at implementation time it was upstream-rate-limited (HTTP 429 from Venice provider). Tried Gemma fallback — that free tier had been retired. Settled on `openai/gpt-oss-120b:free`, which responded cleanly with the requested tone. Updated §2.4 + §5 to reflect.
+- **What fallback behavior I implemented:** On any failure (network, 401, 429, 5xx, empty/whitespace response), set `aiError`, log a warning to the console (`console.warn('AI insight failed', { movieId, message })`), and render the friendly fallback text inside the `.movie-modal__ai` panel: **"We couldn't generate a recommendation for this one — check out the overview above!"** The rest of the modal stays fully functional. Empty/whitespace responses are explicitly treated as failures so the user never sees a blank box. Helper short-circuits early if `details` or `details.overview` is missing, so the call never fires when there's no useful context to send.
+- **What I learned:** Three things —
+  1. **Prompt specs pay off.** Writing the role, task, constraints, and banned phrases in `planning.md` *before* coding meant the system prompt was already a structured paragraph rather than something I'd be tweaking interactively. First-call output matched the spec without iteration.
+  2. **Free-tier model availability shifts.** Treat the spec'd model as a default, not a guarantee. The Llama → Gemma → gpt-oss path took 5 minutes of smoke-testing to discover. Worth keeping the model name in one constant (`MODEL` in [ai.js](src/api/ai.js)) so swapping it is a single-line change.
+  3. **`useEffect` keyed on `details?.id` (not `details`)** prevents duplicate AI calls when React re-renders with a referentially-different but content-identical `details` object. Saves quota and avoids a flicker between cached response and "loading" state on every parent re-render.
 
 ---
 
@@ -355,5 +418,21 @@ A running log of what shipped per milestone, what diverged from the original pla
   - **`background-color` instead of `outline` for hover lift** on cards — outlines don't follow rounded corners cleanly across browsers.
 - **Things deliberately not done:** No `prefers-reduced-motion` media query yet (transitions are short and subtle, but worth adding before a public release). No high-contrast-mode tweaks. No skip-link to main content (a single-page app with no navigation has limited need; revisit if the app grows).
 
-### Pending milestones
-- **AI insight:** Provider choice + prompt finalized; rendered inside MovieModal as a new section below the overview.
+### Milestone 8 — AI Watch Recommendation
+- **Built:** [`src/api/ai.js`](src/api/ai.js) — `getWatchRecommendation(details)` helper that POSTs to OpenRouter with the system + user messages assembled from the spec. Validates non-empty response, throws specific errors so the modal can branch on them. New AI section in [`MovieModal`](src/components/MovieModal.jsx) — three local state vars (`aiInsight`, `loadingInsight`, `aiError`), a second `useEffect` keyed on `details?.id`, and a `<section className="movie-modal__ai" aria-live="polite">` block below the overview. Styled with a subtle purple-gradient panel + yellow uppercase heading.
+- **Diverged from spec on model choice:** Spec called for `meta-llama/llama-3.3-70b-instruct:free` as primary with `google/gemma-3-27b-it:free` as fallback. Smoke-test caught two surprises:
+  1. Llama free tier was upstream-rate-limited at implementation time (transient).
+  2. Gemma 3 27B free tier had been retired ("paid version available" 404).
+  Switched to **`openai/gpt-oss-120b:free`** which responded cleanly with the requested tone on first try. Spec sections §2.4 and §5 updated to match.
+- **Decisions worth keeping:**
+  - **AI state lives in MovieModal**, not App. Per the original architecture decision — recommendation is scoped to the modal's lifetime; new movie selection mounts a fresh modal which resets all three state vars.
+  - **Cancelled-flag pattern** matches the details-fetch effect — clicking through movies fast doesn't show stale recommendations.
+  - **Effect keyed on `details?.id`**, not `details` itself — re-render of details with the same ID won't retrigger the AI call (saves quota, faster perceived UX).
+  - **`aria-live="polite"`** on the AI section — screen readers announce the recommendation when it loads without interrupting current speech.
+  - **Empty/whitespace responses treated as failure** — model occasionally returns nothing; fallback message is friendlier than an empty box.
+  - **Constraints in the system prompt**: banned phrases ("must-see", "tour de force", etc.) listed verbatim — easier than post-processing.
+- **Edge cases handled:** Missing API key → throws early in helper, surfaces as `aiError`. Missing `overview` → effect skips entirely. Switching movies mid-AI-fetch → cancelled flag prevents stale state. Network failure / 401 / 429 → friendly fallback, modal stays functional.
+- **What was deliberately deferred:**
+  - **Streaming responses** — `max_tokens: 200` makes the call short enough that streaming wouldn't meaningfully improve perceived latency.
+  - **Per-movie caching** — refetching on every modal open is fine at this volume; would matter only with heavy reuse.
+  - **Retry logic** — single-shot for now; rate-limit responses surface as the friendly fallback rather than auto-retrying.

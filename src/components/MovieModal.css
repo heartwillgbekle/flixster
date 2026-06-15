@@ -126,6 +126,45 @@
   font-size: 1.02rem;
 }
 
+.movie-modal__ai {
+  margin-top: 24px;
+  padding: 18px 20px 20px;
+  border: 1px solid var(--accent-purple);
+  border-radius: var(--radius-md);
+  background: linear-gradient(
+    180deg,
+    rgba(69, 0, 157, 0.18) 0%,
+    rgba(69, 0, 157, 0.06) 100%
+  );
+}
+
+.movie-modal__ai-heading {
+  margin: 0 0 8px;
+  font-size: 0.78rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 1.2px;
+  color: var(--accent-yellow);
+}
+
+.movie-modal__ai-text {
+  margin: 0;
+  line-height: 1.6;
+  color: var(--text-title);
+  font-size: 0.98rem;
+}
+
+.movie-modal__ai-status {
+  margin: 0;
+  font-size: 0.92rem;
+  color: var(--text-body);
+  font-style: italic;
+}
+
+.movie-modal__ai-status--fallback {
+  color: var(--text-body);
+}
+
 .movie-modal__status {
   padding: 80px 24px;
   text-align: center;

@@ -31,6 +31,11 @@
   transition: var(--transition-smooth);
 }
 
+.sort-control__select option {
+  background-color: var(--bg-card);
+  color: var(--text-title);
+}
+
 .sort-control__select:hover {
   border-color: var(--text-body);
 }

@@ -1,5 +1,6 @@
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import { BACKDROP_BASE } from '../api/tmdb';
+import { getWatchRecommendation } from '../api/ai';
 import './MovieModal.css';
 
 const formatRuntime = (minutes) => {
@@ -21,6 +22,10 @@ const formatReleaseDate = (date) => {
 };
 
 const MovieModal = ({ details, isLoading, error, onClose }) => {
+  const [aiInsight, setAiInsight] = useState(null);
+  const [loadingInsight, setLoadingInsight] = useState(false);
+  const [aiError, setAiError] = useState(null);
+
   useEffect(() => {
     const handleKey = (e) => {
       if (e.key === 'Escape') onClose();
@@ -32,6 +37,36 @@ const MovieModal = ({ details, isLoading, error, onClose }) => {
       document.body.style.overflow = '';
     };
   }, [onClose]);
+
+  useEffect(() => {
+    if (!details || !details.overview) return;
+
+    let cancelled = false;
+    setAiInsight(null);
+    setAiError(null);
+    setLoadingInsight(true);
+
+    getWatchRecommendation(details)
+      .then((text) => {
+        if (!cancelled) setAiInsight(text);
+      })
+      .catch((err) => {
+        if (!cancelled) {
+          console.warn('AI insight failed', {
+            movieId: details.id,
+            message: err.message,
+          });
+          setAiError(err.message);
+        }
+      })
+      .finally(() => {
+        if (!cancelled) setLoadingInsight(false);
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [details?.id]);
 
   const handleBackdropClick = (e) => {
     if (e.target === e.currentTarget) onClose();
@@ -96,6 +131,24 @@ const MovieModal = ({ details, isLoading, error, onClose }) => {
               {details.overview && (
                 <p className="movie-modal__overview">{details.overview}</p>
               )}
+
+              <section className="movie-modal__ai" aria-live="polite">
+                <h3 className="movie-modal__ai-heading">Watch Recommendation</h3>
+                {loadingInsight && (
+                  <p className="movie-modal__ai-status">
+                    Generating…
+                  </p>
+                )}
+                {!loadingInsight && aiInsight && (
+                  <p className="movie-modal__ai-text">{aiInsight}</p>
+                )}
+                {!loadingInsight && aiError && (
+                  <p className="movie-modal__ai-status movie-modal__ai-status--fallback">
+                    We couldn&apos;t generate a recommendation for this one — check
+                    out the overview above!
+                  </p>
+                )}
+              </section>
             </div>
           </>
         )}
