@@ -43,20 +43,26 @@ App
 #### MovieList
 - **Responsibility:** Render a grid of movie cards plus a "Load More" button. Pure presentation — no fetching.
 - **Renders:** A list of `MovieCard` components, a Load More button (when `hasMore`), and inline status messages (loading, error, empty).
-- **Props:** `movies: Movie[]`, `onLoadMore: () => void`, `hasMore: boolean`, `isLoading: boolean`, `error: string | null`. (Adds `onCardClick` in the modal milestone.)
+- **Props:** `movies: Movie[]`, `onLoadMore: () => void`, `hasMore: boolean`, `isLoading: boolean`, `error: string | null`, `onCardClick: (id: number) => void` (forwarded to each MovieCard).
 - **State:** None — pure presentation of data passed in.
 
 #### MovieCard
-- **Responsibility:** Display a single movie's poster, title, and rating; opens modal on click.
-- **Renders:** Poster `<img>`, title, vote average.
+- **Responsibility:** Display a single movie's poster, title, and rating; trigger modal open via `onClick(id)`.
+- **Renders:** Poster `<img>`, title, vote average. Whole card is a `<button>` so click + keyboard activation work.
 - **Props:** `movie: { id, title, poster_path, vote_average, release_date }`, `onClick: (id: number) => void`.
 - **State:** None.
 
 #### MovieModal
-- **Responsibility:** Show full movie details (including runtime + genres which require a separate fetch) and the AI insight.
-- **Renders:** Backdrop image, title, overview, runtime, genres, release date, AI-generated watch recommendation, close button.
-- **Props:** `movieId: number`, `onClose: () => void`.
-- **State:** Owns its own `details` (full movie object), `aiInsight`, `isLoadingDetails`, `isLoadingAi`, `error` — fetched on mount via the movie ID prop.
+- **Responsibility:** Display full movie details (backdrop, title, release date, runtime, genres, overview) and the AI insight. **Pure presentation** — receives details as a prop, does not fetch.
+- **Renders:** Backdrop image, title, tagline (if present), release date + runtime row, genre chip list, overview, AI insight (later), close button. Inline loading and error states.
+- **Props:** `details: MovieDetails | null`, `isLoading: boolean`, `error: string | null`, `onClose: () => void`.
+- **State:** None for movie data (App owns it). Will own `aiInsight` + `isLoadingAi` when the AI feature is added (those are scoped to the modal's lifetime).
+- **Open trigger:** App renders `<MovieModal>` only when `selectedMovieId !== null`. App's click handler (`handleCardClick`) sets `selectedMovieId` when MovieCard's `onClick(id)` fires (propagated up through MovieList).
+- **Close triggers (all call `onClose`, which sets `selectedMovieId = null` in App):**
+  - Click on the close button (×) in the modal header
+  - Press `Escape` key (global keydown listener registered on mount)
+  - Click on the dimmed backdrop (event target check: only fires when click hits the backdrop element, not its children)
+- **Side effects:** Locks body scroll while open via `document.body.style.overflow = 'hidden'`; restored on unmount.
 
 #### Footer
 - **Responsibility:** Display attribution to TMDb and any copyright/links.
@@ -85,10 +91,21 @@ App
 - **Error cases:** Empty query string (skip request), zero results (show "No movies found"), network failure, 422 (invalid query)
 
 ### 2.3 Movie Details (for modal)
-- **Endpoint:** `GET /movie/{movie_id}`
+- **Endpoint:** `GET /movie/{movie_id}` — `movie_id` is a path parameter taken from the clicked MovieCard.
 - **Required params:** `api_key`, `language=en-US`
-- **Response fields used:** `id`, `title`, `overview`, `runtime`, `genres[].name`, `backdrop_path`, `release_date`, `vote_average`, `tagline`
-- **Error cases:** 404 (movie not found / deleted), network failure, missing fields (e.g., `runtime: null`)
+- **Response fields used:**
+  - `title` — modal heading
+  - `release_date` — formatted as year or full date
+  - `runtime` — minutes (integer); render as `Xh Ym`
+  - `genres` — array of `{ id, name }`; render `name`s as comma-joined or chip list
+  - `overview` — paragraph body
+  - `backdrop_path` — full URL: `https://image.tmdb.org/t/p/w780{backdrop_path}`
+  - `vote_average`, `tagline` — optional supporting display
+- **Error cases:**
+  - **404** — movie not found / deleted upstream → show "Movie details unavailable" inside modal, keep close button functional
+  - **401** — bad/missing API key → same fallback; log a warning so it's debuggable
+  - **Network failure** — show "Could not load details. Try again." with retry button
+  - **Missing optional fields** (`runtime: null`, empty `genres`, missing `backdrop_path`) — render gracefully (`Runtime unknown`, omit genre row, fall back to a solid-color modal header instead of a backdrop image)
 
 ### 2.4 AI Insight (LLM provider — TBD)
 - **Endpoint:** `POST <provider chat/completion endpoint>` — exact provider/URL chosen at Milestone 8.
@@ -117,21 +134,22 @@ App
 | `searchQuery` | `string` | `""` | App | User submits SearchBar; cleared when toggling back to Now Playing |
 | `page` | `number` | `1` | App | User clicks "Load More"; reset to 1 on new search or mode switch |
 | `mode` | `"now_playing" \| "search"` | `"now_playing"` | App | Set to `"search"` on submit, `"now_playing"` on clear |
-| `selectedMovieId` | `number \| null` | `null` | App | User clicks MovieCard; cleared on modal close (modal milestone) |
+| `selectedMovieId` | `number \| null` | `null` | App | User clicks MovieCard → set to `movie.id`. Modal close (×, Esc, backdrop) → set to `null`. Doubles as the "modal is open" flag (open ⇔ `!== null`). |
 | `sortOption` | `string` | `"default"` | App | User changes SortControl (sort milestone) |
 | `isLoading` | `boolean` | `false` | App | Set true before fetch, false on resolve/reject |
 | `error` | `string \| null` | `null` | App | Set on fetch failure; cleared on next attempt |
 | `hasMore` | `boolean` | `true` | App | Set from `page < total_pages` after fetch |
 | `inputValue` | `string` | `""` | SearchBar | Every keystroke (controlled input) |
-| `details` | `MovieDetails \| null` | `null` | MovieModal | Set after movie-details fetch |
-| `aiInsight` | `string \| null` | `null` | MovieModal | Set after AI fetch |
-| `isLoadingDetails` | `boolean` | `false` | MovieModal | True during details fetch |
-| `isLoadingAi` | `boolean` | `false` | MovieModal | True during AI fetch |
+| `details` | `MovieDetails \| null` | `null` | App | Set after `getMovieDetails(selectedMovieId)` resolves; cleared when modal closes |
+| `isLoadingDetails` | `boolean` | `false` | App | True during details fetch |
+| `detailsError` | `string \| null` | `null` | App | Set if details fetch fails; cleared when a new movie is selected |
+| `aiInsight` | `string \| null` | `null` | MovieModal | Set after AI fetch (Milestone 8) |
+| `isLoadingAi` | `boolean` | `false` | MovieModal | True during AI fetch (Milestone 8) |
 
 **Notes:**
 - Sorting is applied client-side over `movies` (no API param) — derived value, not stored separately.
 - Switching between Now Playing and Search resets `page = 1` and clears `movies`.
-- Modal state lives in MovieModal (not App) because details/AI are scoped to its lifetime.
+- Movie details (`details`, `isLoadingDetails`, `detailsError`) live in App — App fetches when `selectedMovieId` changes and passes the result down to MovieModal. AI-only state will live in MovieModal since it's scoped to that component's lifetime.
 
 ---
 
@@ -145,11 +163,12 @@ App
 5. MovieCard reads `movie.poster_path` and prepends the image base URL (`https://image.tmdb.org/t/p/w500`) to form the full image URL — this is the only transformation at the card layer.
 
 **Click → Modal path:**
-1. User clicks a MovieCard → `onClick(movie.id)` fires → propagates up via MovieList's `onCardClick` prop → App sets `selectedMovieId = id`.
-2. App renders `<MovieModal movieId={selectedMovieId} onClose={...} />`.
-3. MovieModal's `useEffect` (keyed on `movieId`) fires `fetchMovieDetails(movieId)` → populates local `details` state.
-4. In parallel, MovieModal calls the AI endpoint with `{title, genres, overview}` once details have loaded → populates `aiInsight`.
-5. Closing the modal sets `selectedMovieId = null` in App, which unmounts the modal and clears its local state.
+1. **Where the ID lives:** MovieCard already has the full movie object as a prop (from App → MovieList → MovieCard). It only needs to pass `movie.id` upward — no extra lookup.
+2. **Click handler bubbling:** User clicks a MovieCard → MovieCard calls `props.onClick(movie.id)` → MovieList forwards via `onCardClick` → App's `handleCardClick` calls `setSelectedMovieId(id)`.
+3. **Who owns "modal is open":** App owns `selectedMovieId`. There is **no separate `isModalOpen` flag** — `selectedMovieId !== null` is the open condition. This avoids drift between two states that must always agree.
+4. **Who fetches details:** App. A second `useEffect` keyed on `selectedMovieId` calls `getMovieDetails(id)` and writes to App-owned `details` / `isLoadingDetails` / `detailsError` state. The effect uses a `cancelled` flag in cleanup so a stale fetch doesn't overwrite newer data when the user switches movies quickly.
+5. **How state reaches MovieModal:** App renders `<MovieModal details={details} isLoading={isLoadingDetails} error={detailsError} onClose={...} />` only when `selectedMovieId !== null`. MovieModal is **purely presentational** — no fetching inside.
+6. **Closing:** Any close trigger (×, Esc, backdrop click) calls `onClose()` → App sets `selectedMovieId = null` → the details-fetch effect's `selectedMovieId === null` branch resets `details` and `detailsError` → modal unmounts.
 
 **Search flow:** SearchBar's onSubmit → App sets `searchQuery`, resets `page=1`, calls `fetchSearch(query, 1)` → swaps `movies` with new results. Empty query reverts to Now Playing.
 
@@ -199,3 +218,50 @@ Generate a short, personable "Why you might like this" recommendation for the mo
 ### Error handling
 - On AI failure: hide the AI section silently (don't block the rest of the modal) or show "AI insight unavailable."
 - Cache by `movieId` if revisiting the same modal in one session is common (defer until measured).
+
+---
+
+## 6. Milestone Reflections
+
+A running log of what shipped per milestone, what diverged from the original plan, and what to watch for next. Entries are append-only; the spec sections above always reflect the current target.
+
+### Milestone 0 — Planning
+- **Built:** Initial spec covering component architecture, three TMDb endpoints, state ownership, data flow, and a placeholder AI feature.
+- **Diverged:** None — this *was* the spec.
+- **Decisions worth keeping:** App owns global data state; modal owns its own scoped state (details + AI); AI call kept provider-agnostic so we can pick at Milestone 8.
+- **Open questions deferred to later milestones:** sort UI placement, modal animation, AI provider choice.
+
+### Milestone 1 — MovieCard + MovieList
+- **Built:** [`src/api/tmdb.js`](src/api/tmdb.js) helper with `getNowPlaying` / `searchMovies` / `getMovieDetails`. [`MovieCard`](src/components/MovieCard.jsx) renders poster + title + vote average; [`MovieList`](src/components/MovieList.jsx) fetched Now Playing on mount and rendered a card per result.
+- **Diverged:** Per Milestone 1 instructions, fetching lived in MovieList (not App as originally specced). State (`movies`/`isLoading`/`error`) was owned there temporarily.
+- **Decisions worth keeping:** Wrapped MovieCard in a `<button>` for native keyboard accessibility once `onClick` lands. Fallback poster URL for movies with `null` poster_path.
+- **Tech-debt flagged:** State would have to be lifted to App as soon as SearchBar/SortControl arrived — paid down in Milestone 2.
+
+### Milestone 2 — Search + Pagination + Mode toggle
+- **Built:** [`SearchBar`](src/components/SearchBar.jsx) with controlled input, header "Now Playing" toggle, "Load More" button. App now owns all data state and runs a single `useEffect` keyed on `[mode, searchQuery, page]`. Page 1 replaces `movies`; pages 2+ append via `setMovies(prev => [...prev, ...new])`. `hasMore` derived from `page < total_pages`.
+- **Diverged:** Added a new `mode: "now_playing" | "search"` state variable that wasn't in the original spec — needed to disambiguate which endpoint the next page should hit when "Load More" is clicked. Spec updated to match.
+- **Decisions worth keeping:** SearchBar keeps its own `inputValue` state and only lifts on submit (not every keystroke) — avoids re-fetching on every character. Two ways to leave search mode (Clear button + header "Now Playing") so users always have an obvious exit. Trim + reject empty submissions to avoid wasted API calls.
+- **Edge cases handled:** Page reset to 1 on every mode switch and every new search; `hasMore` re-evaluated after every fetch.
+
+### Milestone 3 — Responsive layout
+- **Built:** Mobile-first flexbox layout with two `min-width` breakpoints (600px, 1024px). Cards use `flex: 1 1 <basis>` with a `max-width` cap to keep orphan cards from blowing up to full width. Removed stale starter `.movie-card { width: 100% }` rule from [App.css](src/App.css) that was overriding the layout. Added line-clamp + min-height to MovieCard titles so long titles don't break row alignment.
+- **Diverged:** Initially shipped CSS Grid (`grid-template-columns: repeat(auto-fill, minmax(...))`); switched to Flexbox per user direction. Approach kept the same mobile-first structure, just swapped the layout primitive.
+- **Decisions worth keeping:** Mobile-first (`min-width` queries) is cleaner than `max-width` overrides — base styles target the smallest screen. Per-breakpoint flex-basis is the knob to tune; gap and padding follow. Capped grid at `max-width: 1400px` so ultra-wide monitors don't get sparse rows.
+- **Tradeoff to remember:** With Flexbox + max-width, very wide screens may show extra horizontal space between cards (rather than stretching them indefinitely). Acceptable for movie posters since vertical aspect ratio matters more than horizontal stretch.
+
+### Milestone 4 — MovieModal + Movie Details fetch
+- **Built:** [`MovieModal`](src/components/MovieModal.jsx) + [`MovieModal.css`](src/components/MovieModal.css). Renders backdrop image (16:9), title, optional tagline, release date + runtime, genre chip list, and overview. Three close affordances: × button, Escape key, backdrop click. Body scroll lock while open.
+- **App changes:** Added `selectedMovieId`, `details`, `isLoadingDetails`, `detailsError` state. Second `useEffect` keyed on `selectedMovieId` fetches details with a `cancelled` flag to ignore stale responses when the user clicks through movies quickly. `handleCardClick` and `handleCloseModal` wire the open/close transitions.
+- **MovieList:** Now forwards `onCardClick` to each `MovieCard` (forwarding-only — no logic).
+- **Diverged:** Original spec had MovieModal own its details fetch. Per Milestone 4 instructions ("Pass the fetched details as props to MovieModal"), App now owns the fetch and the modal is purely presentational. Spec updated: `details` / `isLoadingDetails` / `detailsError` moved to App; only AI-feature state will live in the modal.
+- **Decisions worth keeping:**
+  - **`selectedMovieId !== null` doubles as "modal open"** — no separate flag means no drift.
+  - **Cancelled-flag pattern** in the details effect avoids race conditions if the user switches selection mid-fetch.
+  - **Backdrop click via `e.target === e.currentTarget`** — clicks bubbling up from inside the modal won't accidentally close it.
+  - **Format helpers (`formatRuntime`, `formatReleaseDate`)** live inside MovieModal because they're only used there. Will move to a shared util only if a second component needs them.
+  - **Graceful fallbacks** for missing fields: `runtime: null` → "Runtime unknown", missing `backdrop_path` → no image rendered (no broken image icon), empty `genres` → genre row hidden.
+- **Edge cases handled:** Network failure shows a clear error message inside the modal with the close button still functional. Body scroll restored even if the modal unmounts mid-fetch (cleanup runs unconditionally). Switching movies mid-fetch doesn't show stale data.
+
+### Pending milestones
+- **Sort:** SortControl component + client-side sort over `movies` array (title / release date / rating).
+- **AI insight:** Provider choice + prompt finalized; rendered inside MovieModal as a new section below the overview.

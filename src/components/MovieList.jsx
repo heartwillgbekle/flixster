@@ -1,7 +1,7 @@
 import MovieCard from './MovieCard';
 import './MovieList.css';
 
-const MovieList = ({ movies, isLoading, error, hasMore, onLoadMore }) => {
+const MovieList = ({ movies, isLoading, error, hasMore, onLoadMore, onCardClick }) => {
   if (error) {
     return <p className="movie-list__status movie-list__status--error">Error: {error}</p>;
   }
@@ -14,7 +14,7 @@ const MovieList = ({ movies, isLoading, error, hasMore, onLoadMore }) => {
     <>
       <div className="movie-list">
         {movies.map((movie) => (
-          <MovieCard key={movie.id} movie={movie} />
+          <MovieCard key={movie.id} movie={movie} onClick={onCardClick} />
         ))}
       </div>
 

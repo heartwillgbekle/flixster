@@ -2,7 +2,8 @@ import { useEffect, useState } from 'react'
 import './App.css'
 import MovieList from './components/MovieList'
 import SearchBar from './components/SearchBar'
-import { getNowPlaying, searchMovies } from './api/tmdb'
+import MovieModal from './components/MovieModal'
+import { getMovieDetails, getNowPlaying, searchMovies } from './api/tmdb'
 
 const App = () => {
   const [movies, setMovies] = useState([])
@@ -12,6 +13,11 @@ const App = () => {
   const [hasMore, setHasMore] = useState(true)
   const [isLoading, setIsLoading] = useState(false)
   const [error, setError] = useState(null)
+
+  const [selectedMovieId, setSelectedMovieId] = useState(null)
+  const [details, setDetails] = useState(null)
+  const [isLoadingDetails, setIsLoadingDetails] = useState(false)
+  const [detailsError, setDetailsError] = useState(null)
 
   useEffect(() => {
     const fetcher =
@@ -32,6 +38,34 @@ const App = () => {
       .finally(() => setIsLoading(false))
   }, [mode, searchQuery, page])
 
+  useEffect(() => {
+    if (selectedMovieId === null) {
+      setDetails(null)
+      setDetailsError(null)
+      return
+    }
+
+    let cancelled = false
+    setIsLoadingDetails(true)
+    setDetailsError(null)
+    setDetails(null)
+
+    getMovieDetails(selectedMovieId)
+      .then((data) => {
+        if (!cancelled) setDetails(data)
+      })
+      .catch((err) => {
+        if (!cancelled) setDetailsError(err.message)
+      })
+      .finally(() => {
+        if (!cancelled) setIsLoadingDetails(false)
+      })
+
+    return () => {
+      cancelled = true
+    }
+  }, [selectedMovieId])
+
   const handleSearch = (query) => {
     const trimmed = query.trim()
     if (!trimmed) return
@@ -49,6 +83,9 @@ const App = () => {
   const handleLoadMore = () => {
     setPage((prev) => prev + 1)
   }
+
+  const handleCardClick = (id) => setSelectedMovieId(id)
+  const handleCloseModal = () => setSelectedMovieId(null)
 
   return (
     <div className="App">
@@ -74,7 +111,16 @@ const App = () => {
         error={error}
         hasMore={hasMore}
         onLoadMore={handleLoadMore}
+        onCardClick={handleCardClick}
       />
+      {selectedMovieId !== null && (
+        <MovieModal
+          details={details}
+          isLoading={isLoadingDetails}
+          error={detailsError}
+          onClose={handleCloseModal}
+        />
+      )}
     </div>
   )
 }
