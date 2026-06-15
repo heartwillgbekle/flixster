@@ -15,7 +15,11 @@ const MovieCard = ({ movie, onClick }) => {
       className="movie-card"
       onClick={() => onClick?.(movie.id)}
     >
-      <img className="movie-card__poster" src={posterUrl} alt={movie.title} />
+      <img
+        className="movie-card__poster"
+        src={posterUrl}
+        alt={`${movie.title} poster`}
+      />
       <div className="movie-card__body">
         <h3 className="movie-card__title">{movie.title}</h3>
         <p className="movie-card__rating">

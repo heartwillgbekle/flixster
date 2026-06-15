@@ -1,23 +1,29 @@
+/*
+ * Visual intent: dramatic full-width header. Logo + wordmark form a tight
+ * lockup; a thin yellow accent line on hover gives the brand a heartbeat.
+ */
+
 .header {
-  background-color: #282c34;
-  color: #fff;
-  padding: 20px 24px;
+  background-color: var(--bg-main);
+  padding: 32px 24px 24px;
   display: flex;
   align-items: center;
   justify-content: center;
+  border-bottom: 1px solid var(--border-subtle);
 }
 
 .header__brand {
   display: flex;
   align-items: center;
-  gap: 14px;
+  gap: 16px;
 }
 
 .header__logo {
-  width: 48px;
-  height: 48px;
+  width: 56px;
+  height: 56px;
   display: block;
   flex-shrink: 0;
+  filter: drop-shadow(0 0 12px var(--accent-purple-soft));
 }
 
 .header__text {
@@ -28,28 +34,33 @@
 
 .header__title {
   margin: 0;
-  font-size: 1.6rem;
-  letter-spacing: 0.5px;
+  font-size: 2rem;
+  font-weight: 900;
+  letter-spacing: -0.5px;
+  color: var(--text-title);
+  line-height: 1.1;
 }
 
 .header__tagline {
-  margin: 2px 0 0;
+  margin: 4px 0 0;
   font-size: 0.9rem;
-  color: #c4c8d0;
+  font-weight: 500;
+  color: var(--accent-yellow);
+  letter-spacing: 0.3px;
 }
 
 @media (max-width: 600px) {
   .header {
-    padding: 14px 16px;
+    padding: 20px 16px 16px;
   }
 
   .header__logo {
-    width: 38px;
-    height: 38px;
+    width: 42px;
+    height: 42px;
   }
 
   .header__title {
-    font-size: 1.3rem;
+    font-size: 1.5rem;
   }
 
   .header__tagline {

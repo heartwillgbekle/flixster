@@ -6,6 +6,10 @@
  * Cards use flex-basis to control row count; max-width caps orphan cards
  * on the last row so they don't stretch to fill the whole row.
  * Max content width 1400px, centered.
+ *
+ * Visual intent: airy, evenly spaced grid. Status messages are quiet
+ * and centered; the Load More button is a yellow-bordered ghost that
+ * fills with yellow on hover — encouraging but not loud.
  */
 
 .movie-list {
@@ -48,26 +52,34 @@
 
 .movie-list__status {
   text-align: center;
-  padding: 40px;
-  font-size: 1.1rem;
-  color: #555;
+  padding: 60px 24px;
+  font-size: 1.05rem;
+  color: var(--text-body);
   width: 100%;
 }
 
 .movie-list__status--error {
-  color: #c0392b;
+  color: #ff7b7b;
 }
 
 .movie-list__footer {
   display: flex;
   justify-content: center;
-  padding: 24px 0 48px;
+  padding: 32px 0 56px;
   width: 100%;
 }
 
 .movie-list__load-more {
-  padding: 10px 28px;
-  font-size: 1rem;
-  border-radius: 6px;
-  cursor: pointer;
+  padding: 12px 32px;
+  font-size: 0.95rem;
+  font-weight: 600;
+  letter-spacing: 0.3px;
+  border-radius: var(--radius-sm);
+  background-color: transparent;
+  color: var(--accent-yellow);
+  border: 1.5px solid var(--accent-yellow);
+}
+
+.movie-list__load-more:hover {
+  background-color: rgba(255, 255, 19, 0.1);
 }

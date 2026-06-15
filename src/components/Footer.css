@@ -1,16 +1,24 @@
+/*
+ * Visual intent: quiet, low-contrast footer that completes the page without
+ * competing with the grid. Yellow link is the only accent, signaling the
+ * required TMDb attribution.
+ */
+
 .footer {
-  background-color: #282c34;
-  color: #c4c8d0;
-  padding: 24px 20px;
-  margin-top: 40px;
+  background-color: var(--bg-main);
+  color: var(--text-body);
+  padding: 32px 20px;
+  margin-top: 60px;
   text-align: center;
   font-size: 0.85rem;
-  line-height: 1.5;
+  line-height: 1.6;
+  border-top: 1px solid var(--border-subtle);
 }
 
 .footer__copy {
-  margin: 0 0 6px;
-  color: #fff;
+  margin: 0 0 8px;
+  color: var(--text-title);
+  font-weight: 600;
 }
 
 .footer__attribution {
@@ -21,10 +29,12 @@
 }
 
 .footer__link {
-  color: #ffe0e0;
+  color: var(--accent-yellow);
   text-decoration: underline;
+  text-underline-offset: 2px;
+  transition: var(--transition-smooth);
 }
 
 .footer__link:hover {
-  color: #fff;
+  color: var(--text-title);
 }

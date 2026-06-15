@@ -1,19 +1,89 @@
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;900&display=swap');
+
+/*
+ * Visual intent: cinematic, high-contrast theme. Deep indigo-purple canvas
+ * with electric-yellow accents to anchor attention. White headings on
+ * muted lavender body copy keep meta information from competing with titles.
+ */
+
+:root {
+  --bg-main: #0a0019;
+  --bg-card: #161324;
+  --bg-card-hover: #1f1a31;
+  --accent-yellow: #ffff13;
+  --accent-purple: #45009d;
+  --accent-purple-soft: rgba(69, 0, 157, 0.3);
+
+  --text-title: #ffffff;
+  --text-body: #a39eb8;
+  --text-muted: #7d7891;
+
+  --border-subtle: rgba(255, 255, 255, 0.08);
+
+  --font-sans: 'Inter', system-ui, -apple-system, sans-serif;
+
+  --radius-sm: 6px;
+  --radius-md: 8px;
+  --radius-lg: 12px;
+
+  --transition-smooth: all 0.25s cubic-bezier(0.25, 0.8, 0.25, 1);
+  --shadow-card: 0 4px 12px rgba(0, 0, 0, 0.5);
+  --shadow-card-hover: 0 12px 24px var(--accent-purple-soft);
+  --shadow-modal: 0 24px 48px rgba(0, 0, 0, 0.8);
+}
+
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+html,
 body {
   margin: 0;
-  font-family: Arial, sans-serif;
-  background-color: #f4f4f4;
+  padding: 0;
+}
+
+body {
+  background-color: var(--bg-main);
+  color: var(--text-title);
+  font-family: var(--font-sans);
+  line-height: 1.5;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
 }
 
 button {
-  background-color: #282c34;
-  color: white;
+  font-family: inherit;
+  background-color: var(--accent-purple);
+  color: var(--text-title);
+  border: none;
   cursor: pointer;
-  font-size: 16px;
-  font-weight: bold;
-  transition: background-color 0.3s ease;
+  font-size: 1rem;
+  font-weight: 600;
+  transition: var(--transition-smooth);
 }
 
-button:hover {
-  background-color: #777;
-  color: white;
+button:hover:not(:disabled) {
+  opacity: 0.85;
+}
+
+button:focus-visible {
+  outline: 2px solid var(--accent-yellow);
+  outline-offset: 2px;
+}
+
+button:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+a {
+  color: var(--accent-yellow);
+}
+
+a:focus-visible {
+  outline: 2px solid var(--accent-yellow);
+  outline-offset: 2px;
+  border-radius: 2px;
 }

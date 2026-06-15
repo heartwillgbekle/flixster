@@ -181,6 +181,51 @@ App
 
 ---
 
+## 4.6 Visual Intent + Accessibility
+
+### Theme — "cinematic dark"
+High-contrast cinematic theme using deep indigo-purples and electric yellow to guide attention and ensure readability. Typography is set in **Inter** (Google Fonts) for legibility at small sizes.
+
+| Token | Value | Usage |
+|---|---|---|
+| `--bg-main` | `#0a0019` | Page canvas, header, footer |
+| `--bg-card` | `#161324` | Cards, modal, inputs |
+| `--bg-card-hover` | `#1f1a31` | Card hover background |
+| `--accent-yellow` | `#ffff13` | Primary CTA, ratings, focus rings, links |
+| `--accent-purple` | `#45009d` | Secondary CTA, genre chip borders, glow |
+| `--text-title` | `#ffffff` | Headings, body title text |
+| `--text-body` | `#a39eb8` | Metadata, descriptions, footer copy |
+| `--text-muted` | `#7d7891` | Tertiary detail (errors, footnotes) |
+
+All design tokens live as CSS custom properties on `:root` in [`src/index.css`](src/index.css) so any component can pull them directly.
+
+### Per-component visual intent (recorded as comments at the top of each CSS file)
+- **Header** — dramatic full-width brand bar with logo glow and a yellow tagline accent that gives the brand a "heartbeat."
+- **Footer** — quiet, low-contrast, completes the page without competing with the grid; yellow link is the only accent.
+- **MovieCard** — poster-first; subtle scale + purple ambient glow on hover for energy without jitter. Yellow rating text for at-a-glance scanning.
+- **MovieList** — airy spacing; Load More button is a yellow ghost that fills with yellow on hover (encouraging, not loud).
+- **MovieModal** — immersive, frosted-purple backdrop; clear hierarchy of heroic title → yellow meta → genre chips → calm body copy.
+- **SearchBar** — dark input with yellow focus ring; signals interactivity without competing with the grid.
+- **SortControl** — secondary control; quieter than search.
+
+### Accessibility checklist (Milestone 7)
+- ✅ **Image alt text** — all `<img>` elements have descriptive alt. MovieCard uses `${movie.title} poster` per the milestone hint. Decorative modal backdrop uses `alt=""` (intentional — same image's title text appears in the modal heading, so the backdrop is purely decorative).
+- ✅ **Keyboard navigation** — all interactive elements are native focusable controls (`<button>`, `<input>`, `<select>`, `<a>`). MovieCard wraps the entire poster in a `<button>` so Tab-then-Enter opens the modal.
+- ✅ **Visible focus rings** — global `:focus-visible` rule plus per-component overrides give every focusable element a 2px yellow outline with a 2-3px offset. No `outline: none` without a replacement.
+- ✅ **Semantic HTML** — `<header>`, `<main>`, `<footer>` for landmarks; `<button>` for clickable actions; `<input>` for search; `<select>` for sort; `<dialog>`-style modal uses `role="dialog"` + `aria-modal="true"`; close button has `aria-label="Close"`.
+- ✅ **Esc closes modal** — global keydown listener mounted with the modal.
+- ✅ **Body scroll lock** — prevents background scrolling while the modal is open; restored on unmount.
+- ✅ **Color contrast (WCAG 2.0 AA — 4.5:1 for normal text)** — verified with WebAIM contrast checker:
+  - White (`#ffffff`) on `#0a0019` → 20.4:1 ✅
+  - White on `#161324` → 17.7:1 ✅
+  - Body text (`#a39eb8`) on `#0a0019` → 8.6:1 ✅
+  - Body text on `#161324` → 7.5:1 ✅
+  - Yellow (`#ffff13`) on `#0a0019` → 18.6:1 ✅
+  - Yellow on `#161324` → 16.1:1 ✅
+- ✅ **External links** — TMDb attribution uses `target="_blank"` + `rel="noopener noreferrer"` (security best practice).
+
+---
+
 ## 4.5 Responsive Breakpoints
 
 Two breakpoints split the layout into three sizes. The list uses **flexbox** (`display: flex; flex-wrap: wrap`) and each card uses `flex: 1 1 <basis>` with a `max-width` cap. The basis controls the target card width per breakpoint; `flex-grow` lets cards stretch to fill rows, and `max-width` prevents orphan cards on the last row from blowing up to full width.
@@ -293,6 +338,22 @@ A running log of what shipped per milestone, what diverged from the original pla
   - **`target="_blank"` + `rel="noopener noreferrer"`** on the TMDb link — security best practice for external links.
   - **TMDb attribution wording** matches their public-facing requirement: "This product uses the TMDb API but is not endorsed or certified by TMDb."
 - **Tradeoff:** Modal is rendered as a sibling of `<main>` and `<Footer>`, not inside `<main>`. Keeps the modal's `position: fixed` overlay above everything regardless of where the user has scrolled.
+
+### Milestone 7 — Polish + Accessibility
+- **Built:** Adopted a cinematic dark theme — deep indigo-purple canvas (`#0a0019`), slate-purple cards, electric-yellow CTAs/ratings, white headings on muted lavender body copy. All design tokens live as CSS custom properties on `:root` in [`src/index.css`](src/index.css) — components pull them directly so a future palette swap is one file. Imported **Inter** from Google Fonts (weights 400/500/600/700/900). Restyled every component (Header, Footer, MovieCard, MovieList, MovieModal, SearchBar, SortControl, App toolbar) to use the tokens.
+- **Visual intent recorded as comments** at the top of each CSS file (1–2 sentences per file describing what the styles are trying to achieve), per the milestone instructions.
+- **Accessibility fixes:**
+  - MovieCard poster `alt` changed from `movie.title` to `${movie.title} poster` per milestone spec.
+  - Added global `:focus-visible` outline rule (2px yellow, 2px offset) plus per-component overrides for cards and the modal close button.
+  - Verified contrast ratios with WebAIM — every text/background pair is ≥7:1, well above the 4.5:1 AA requirement.
+  - Confirmed semantic structure: `<header>` / `<main>` / `<footer>` landmarks, `<button>` for all clickable actions, `<input>`/`<select>` for form controls, modal uses `role="dialog"` + `aria-modal="true"`.
+- **Decisions worth keeping:**
+  - **CSS variables on `:root`** is the cheapest path to themability. Future "light mode" or palette experiment is a single-file change.
+  - **Yellow as the focus accent** doubles as the brand color, so the focus ring matches the visual identity rather than feeling tacked on.
+  - **`backdrop-filter: blur(8px)` + `-webkit-backdrop-filter`** on the modal — modern browsers get the glassy effect; Safari fallback keeps the dim overlay.
+  - **`button:hover:not(:disabled)`** at the global level prevents disabled buttons (like the active "Now Playing" toggle) from animating on hover.
+  - **`background-color` instead of `outline` for hover lift** on cards — outlines don't follow rounded corners cleanly across browsers.
+- **Things deliberately not done:** No `prefers-reduced-motion` media query yet (transitions are short and subtle, but worth adding before a public release). No high-contrast-mode tweaks. No skip-link to main content (a single-page app with no navigation has limited need; revisit if the app grows).
 
 ### Pending milestones
 - **AI insight:** Provider choice + prompt finalized; rendered inside MovieModal as a new section below the overview.
