@@ -17,10 +17,10 @@ App
 ### Components
 
 #### App
-- **Responsibility:** Root component that owns global state and orchestrates data fetching.
-- **Renders:** Header, SearchBar, SortControl, MovieList, MovieModal (when a movie is selected), Footer.
+- **Responsibility:** Root component. Owns global state and orchestrates data fetching across SearchBar, MovieList, and (later) the modal.
+- **Renders:** Header, SearchBar, SortControl (later), MovieList, MovieModal (when a movie is selected), Footer.
 - **Props:** None (root).
-- **State:** Owns nearly all app state — `movies`, `searchQuery`, `page`, `selectedMovie`, `sortOption`, `isLoading`, `error`, `hasMore`.
+- **State:** `movies`, `searchQuery`, `page`, `mode` (`"now_playing" | "search"`), `selectedMovieId` (later), `sortOption` (later), `isLoading`, `error`, `hasMore`.
 
 #### Header
 - **Responsibility:** Display the app title/logo and branding.
@@ -29,10 +29,10 @@ App
 - **State:** None (presentational).
 
 #### SearchBar
-- **Responsibility:** Capture user search input and trigger search queries.
-- **Renders:** Text input + submit/clear button.
-- **Props:** `searchQuery: string`, `onSearch: (query: string) => void`, `onClear: () => void`.
-- **State:** Local controlled-input state for the text field (lifted to App on submit).
+- **Responsibility:** Capture user search input and trigger search/clear actions.
+- **Renders:** Controlled text input, submit button, clear button (when there's an active query).
+- **Props:** `onSearch: (query: string) => void`, `onClear: () => void`, `activeQuery: string` (so the bar can show what's currently searched and reset its input on clear).
+- **State:** Local controlled-input state (`inputValue`) — only lifted to App on submit, not on every keystroke.
 
 #### SortControl
 - **Responsibility:** Let user pick a sort option for the current movie list.
@@ -41,9 +41,9 @@ App
 - **State:** None — controlled by App.
 
 #### MovieList
-- **Responsibility:** Display a grid of movie cards and a "Load More" button for pagination.
-- **Renders:** A list of `MovieCard` components, plus a Load More button at the bottom.
-- **Props:** `movies: Movie[]`, `onCardClick: (id: number) => void`, `onLoadMore: () => void`, `hasMore: boolean`, `isLoading: boolean`.
+- **Responsibility:** Render a grid of movie cards plus a "Load More" button. Pure presentation — no fetching.
+- **Renders:** A list of `MovieCard` components, a Load More button (when `hasMore`), and inline status messages (loading, error, empty).
+- **Props:** `movies: Movie[]`, `onLoadMore: () => void`, `hasMore: boolean`, `isLoading: boolean`, `error: string | null`. (Adds `onCardClick` in the modal milestone.)
 - **State:** None — pure presentation of data passed in.
 
 #### MovieCard
@@ -90,20 +90,39 @@ App
 - **Response fields used:** `id`, `title`, `overview`, `runtime`, `genres[].name`, `backdrop_path`, `release_date`, `vote_average`, `tagline`
 - **Error cases:** 404 (movie not found / deleted), network failure, missing fields (e.g., `runtime: null`)
 
+### 2.4 AI Insight (LLM provider — TBD)
+- **Endpoint:** `POST <provider chat/completion endpoint>` — exact provider/URL chosen at Milestone 8.
+- **Auth:** Bearer token or API key in request headers, sourced from a dedicated env var (e.g., `VITE_AI_API_KEY`), separate from the TMDb key.
+- **Required body params (typical shape):**
+  - `model` — model identifier
+  - `max_tokens` (or equivalent) — capped low (~200) since output is 2–3 sentences
+  - `messages` / `prompt` — user prompt built from `{title, genres, overview}` (see Section 5)
+- **Response fields used:** Whatever field carries the generated text (e.g., `content[0].text`, `choices[0].message.content`) — extract a single string.
+- **Error cases:**
+  - 401 / bad key → hide AI section, log warning
+  - 429 / rate limit → show "AI insight unavailable, try again later"
+  - 5xx / overloaded → same fallback as rate limit
+  - Network failure → hide AI section silently
+  - Empty or malformed response → fall back to "No insight generated"
+
+> ⚠️ **Security note:** Calling an LLM provider directly from the browser exposes the API key to anyone who opens DevTools. Acceptable for this learning project; in production this call should be proxied through a backend that holds the key server-side.
+
 ---
 
 ## 3. State Architecture
 
 | Variable | Type | Initial Value | Owner | Update Trigger |
 |---|---|---|---|---|
-| `movies` | `Movie[]` | `[]` | App | After fetch (Now Playing, Search, Load More) |
-| `searchQuery` | `string` | `""` | App | User submits SearchBar; cleared on reset |
-| `page` | `number` | `1` | App | User clicks "Load More"; reset to 1 on new search |
-| `selectedMovieId` | `number \| null` | `null` | App | User clicks MovieCard; cleared on modal close |
-| `sortOption` | `string` | `"default"` | App | User changes SortControl |
+| `movies` | `Movie[]` | `[]` | App | After fetch — replaced on page 1, appended on Load More |
+| `searchQuery` | `string` | `""` | App | User submits SearchBar; cleared when toggling back to Now Playing |
+| `page` | `number` | `1` | App | User clicks "Load More"; reset to 1 on new search or mode switch |
+| `mode` | `"now_playing" \| "search"` | `"now_playing"` | App | Set to `"search"` on submit, `"now_playing"` on clear |
+| `selectedMovieId` | `number \| null` | `null` | App | User clicks MovieCard; cleared on modal close (modal milestone) |
+| `sortOption` | `string` | `"default"` | App | User changes SortControl (sort milestone) |
 | `isLoading` | `boolean` | `false` | App | Set true before fetch, false on resolve/reject |
 | `error` | `string \| null` | `null` | App | Set on fetch failure; cleared on next attempt |
 | `hasMore` | `boolean` | `true` | App | Set from `page < total_pages` after fetch |
+| `inputValue` | `string` | `""` | SearchBar | Every keystroke (controlled input) |
 | `details` | `MovieDetails \| null` | `null` | MovieModal | Set after movie-details fetch |
 | `aiInsight` | `string \| null` | `null` | MovieModal | Set after AI fetch |
 | `isLoadingDetails` | `boolean` | `false` | MovieModal | True during details fetch |
@@ -160,7 +179,7 @@ Generate a short, personable "Why you might like this" recommendation for the mo
 - Cleared automatically when the modal unmounts (new movie ID = new modal instance via `key={movieId}`).
 
 ### Provider
-- Will use the Claude API (Sonnet/Haiku — pick based on latency vs. quality). Exact model and prompt structure to be finalized at Milestone 8; placeholder prompt:
+- LLM provider TBD — finalized at Milestone 8 based on latency, quality, and ease of integration. Whichever provider is chosen, the call goes through the contract in Section 2.4. Placeholder prompt:
   > "In 2–3 sentences, tell me why a viewer might enjoy *{title}* — a {genres} film about: {overview}. Be specific and avoid generic phrasing."
 
 ### Error handling

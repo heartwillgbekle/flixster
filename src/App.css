@@ -12,6 +12,18 @@
   padding: 20px;
 }
 
+.App-header__nav {
+  padding: 8px 18px;
+  font-size: 0.95rem;
+  border-radius: 6px;
+  cursor: pointer;
+}
+
+.App-header__nav:disabled {
+  opacity: 0.5;
+  cursor: default;
+}
+
 @media (max-width: 600px) {
   .movie-card {
     width: 100%;
