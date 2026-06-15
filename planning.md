@@ -36,7 +36,7 @@ App
 
 #### SortControl
 - **Responsibility:** Let user pick a sort option for the current movie list.
-- **Renders:** A `<select>` dropdown (or button group) with options: Title (A–Z), Release Date (newest), Rating (highest).
+- **Renders:** A native `<select>` dropdown with four options: Default (API order), Title (A–Z), Release Date (newest), Rating (highest).
 - **Props:** `sortOption: string`, `onSortChange: (option: string) => void`.
 - **State:** None — controlled by App.
 
@@ -135,7 +135,7 @@ App
 | `page` | `number` | `1` | App | User clicks "Load More"; reset to 1 on new search or mode switch |
 | `mode` | `"now_playing" \| "search"` | `"now_playing"` | App | Set to `"search"` on submit, `"now_playing"` on clear |
 | `selectedMovieId` | `number \| null` | `null` | App | User clicks MovieCard → set to `movie.id`. Modal close (×, Esc, backdrop) → set to `null`. Doubles as the "modal is open" flag (open ⇔ `!== null`). |
-| `sortOption` | `string` | `"default"` | App | User changes SortControl (sort milestone) |
+| `sortOption` | `"default" \| "title-asc" \| "release-desc" \| "rating-desc"` | `"default"` | App | User changes SortControl. Sort applied as a render-time transform via `useMemo` over `movies` — does NOT mutate state. |
 | `isLoading` | `boolean` | `false` | App | Set true before fetch, false on resolve/reject |
 | `error` | `string \| null` | `null` | App | Set on fetch failure; cleared on next attempt |
 | `hasMore` | `boolean` | `true` | App | Set from `page < total_pages` after fetch |
@@ -171,6 +171,12 @@ App
 6. **Closing:** Any close trigger (×, Esc, backdrop click) calls `onClose()` → App sets `selectedMovieId = null` → the details-fetch effect's `selectedMovieId === null` branch resets `details` and `detailsError` → modal unmounts.
 
 **Search flow:** SearchBar's onSubmit → App sets `searchQuery`, resets `page=1`, calls `fetchSearch(query, 1)` → swaps `movies` with new results. Empty query reverts to Now Playing.
+
+**Sort flow:** Sort is a **render-time transformation, not a state mutation.** App keeps `movies` raw from the API and derives `sortedMovies` via `useMemo([movies, sortOption])`. `sortedMovies` (not `movies`) is passed to MovieList. Consequences:
+- The fetch effect doesn't need to know anything about sorting.
+- Load More appends to raw `movies`; the sort re-applies automatically on the next render.
+- Switching sort options is instant (no refetch, no array mutation).
+- Default uses the array reference directly (no copy); other options use `[...movies].sort(SORT_FNS[option])` so the in-place sort doesn't mutate state.
 
 ---
 
@@ -262,6 +268,18 @@ A running log of what shipped per milestone, what diverged from the original pla
   - **Graceful fallbacks** for missing fields: `runtime: null` → "Runtime unknown", missing `backdrop_path` → no image rendered (no broken image icon), empty `genres` → genre row hidden.
 - **Edge cases handled:** Network failure shows a clear error message inside the modal with the close button still functional. Body scroll restored even if the modal unmounts mid-fetch (cleanup runs unconditionally). Switching movies mid-fetch doesn't show stale data.
 
+### Milestone 5 — Sorting
+- **Built:** [`SortControl`](src/components/SortControl.jsx) — controlled native `<select>` with four options (Default, Title A–Z, Release Date newest, Rating highest). [`SortControl.css`](src/components/SortControl.css) matches the SearchBar styling. Wired between SearchBar and MovieList in App.
+- **App changes:** Added `sortOption` state (initial `"default"`) and `SORT_FNS` constant at module scope mapping option strings to comparator functions. `sortedMovies` is a `useMemo` derivation over `[movies, sortOption]` — passed to MovieList instead of raw `movies`.
+- **Decisions taken (per Milestone 5 prompt):**
+  - **Sort happens at render-time, not in state.** `movies` stays raw from the API; sort is a derived value. This decouples sort from fetching: Load More appends to raw `movies`, sort re-applies automatically. Switching sort options is instant.
+  - **Fixed direction per option.** Title ascending, release/rating descending — matches the milestone's listed defaults and avoids a separate asc/desc toggle.
+  - **Native `<select>`** chosen over a button group for accessibility, mobile-friendliness, and zero custom code.
+- **Decisions worth keeping:**
+  - **Defensive copy before sorting** — `[...movies].sort()` so the in-place sort doesn't mutate React state. The `default` branch returns `movies` directly (no copy needed) for a tiny perf/identity win.
+  - **Comparators live module-scope**, not inside the component. They never change, so re-creating them per render is wasted work.
+  - **Sort persists across mode switches and Load More** — intentional. Searching while sorted by rating keeps the search results sorted by rating; loading more pages folds new movies into the existing sort order.
+- **Edge cases handled / accepted:** `localeCompare` handles unicode/diacritics correctly; missing `release_date` (rare) sorts to `NaN` which is benign; `vote_average` defaults to 0 from TMDb so missing-rating sort is well-defined.
+
 ### Pending milestones
-- **Sort:** SortControl component + client-side sort over `movies` array (title / release date / rating).
 - **AI insight:** Provider choice + prompt finalized; rendered inside MovieModal as a new section below the overview.

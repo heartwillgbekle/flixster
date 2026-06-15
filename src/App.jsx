@@ -1,9 +1,17 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import './App.css'
 import MovieList from './components/MovieList'
 import SearchBar from './components/SearchBar'
+import SortControl from './components/SortControl'
 import MovieModal from './components/MovieModal'
 import { getMovieDetails, getNowPlaying, searchMovies } from './api/tmdb'
+
+const SORT_FNS = {
+  'title-asc': (a, b) => a.title.localeCompare(b.title),
+  'release-desc': (a, b) =>
+    new Date(b.release_date) - new Date(a.release_date),
+  'rating-desc': (a, b) => b.vote_average - a.vote_average,
+}
 
 const App = () => {
   const [movies, setMovies] = useState([])
@@ -14,10 +22,17 @@ const App = () => {
   const [isLoading, setIsLoading] = useState(false)
   const [error, setError] = useState(null)
 
+  const [sortOption, setSortOption] = useState('default')
+
   const [selectedMovieId, setSelectedMovieId] = useState(null)
   const [details, setDetails] = useState(null)
   const [isLoadingDetails, setIsLoadingDetails] = useState(false)
   const [detailsError, setDetailsError] = useState(null)
+
+  const sortedMovies = useMemo(() => {
+    if (sortOption === 'default') return movies
+    return [...movies].sort(SORT_FNS[sortOption])
+  }, [movies, sortOption])
 
   useEffect(() => {
     const fetcher =
@@ -105,8 +120,9 @@ const App = () => {
         onSearch={handleSearch}
         onClear={handleClear}
       />
+      <SortControl sortOption={sortOption} onSortChange={setSortOption} />
       <MovieList
-        movies={movies}
+        movies={sortedMovies}
         isLoading={isLoading}
         error={error}
         hasMore={hasMore}
