@@ -22,6 +22,9 @@ async function tmdbFetch(path, params = {}) {
 export const getNowPlaying = (page = 1) =>
   tmdbFetch('/movie/now_playing', { page });
 
+export const getTopRated = (page = 1) =>
+  tmdbFetch('/movie/top_rated', { page });
+
 export const searchMovies = (query, page = 1) =>
   tmdbFetch('/search/movie', { query, page, include_adult: false });
 

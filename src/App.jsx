@@ -3,6 +3,7 @@ import './App.css'
 import Header from './components/Header'
 import Footer from './components/Footer'
 import Sidebar from './components/Sidebar'
+import Hero from './components/Hero'
 import ListPage from './components/ListPage'
 import MovieList from './components/MovieList'
 import SearchBar from './components/SearchBar'
@@ -12,6 +13,7 @@ import {
   getMovieDetails,
   getMovieVideos,
   getNowPlaying,
+  getTopRated,
   pickBestTrailer,
   searchMovies,
 } from './api/tmdb'
@@ -39,6 +41,8 @@ const App = () => {
   const [isSidebarOpen, setIsSidebarOpen] = useState(false)
   const [view, setView] = useState('home')
 
+  const [heroSlides, setHeroSlides] = useState([])
+
   const [selectedMovieId, setSelectedMovieId] = useState(null)
   const [details, setDetails] = useState(null)
   const [trailer, setTrailer] = useState(null)
@@ -49,6 +53,27 @@ const App = () => {
     if (sortOption === 'default') return movies
     return [...movies].sort(SORT_FNS[sortOption])
   }, [movies, sortOption])
+
+  useEffect(() => {
+    let cancelled = false
+    console.log('[Hero] fetching top rated…')
+    getTopRated(1)
+      .then((data) => {
+        if (cancelled) return
+        const picks = data.results
+          .filter((m) => m.backdrop_path && m.overview)
+          .slice(0, 5)
+        console.log('[Hero] slides ready:', picks.length, picks.map((p) => p.title))
+        setHeroSlides(picks)
+      })
+      .catch((err) => {
+        console.warn('[Hero] fetch failed', err)
+        if (!cancelled) setHeroSlides([])
+      })
+    return () => {
+      cancelled = true
+    }
+  }, [])
 
   useEffect(() => {
     const fetcher =
@@ -183,14 +208,6 @@ const App = () => {
               <span />
             </span>
           </button>
-          <button
-            type="button"
-            className="App-toolbar__nav"
-            onClick={handleClear}
-            disabled={mode === 'now_playing' && view === 'home'}
-          >
-            Now Playing
-          </button>
         </div>
         <Sidebar
           id="lists-panel"
@@ -213,6 +230,14 @@ const App = () => {
 
         {view === 'home' && (
           <>
+            {mode === 'now_playing' && (
+              <Hero
+                slides={heroSlides}
+                onCardClick={handleCardClick}
+                mode={mode}
+                onClearMode={handleClear}
+              />
+            )}
             <SortControl
               sortOption={sortOption}
               onSortChange={setSortOption}

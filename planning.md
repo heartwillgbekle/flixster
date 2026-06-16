@@ -7,9 +7,9 @@
 App
 ├── Header (with SearchBar in actions slot)
 ├── App-main
-│   ├── App-toolbar (☰ hamburger + Now Playing toggle)
+│   ├── App-toolbar (☰ hamburger)
 │   ├── Sidebar (slide-in drawer with nav: Home / Favorites / Watched)
-│   ├── view = "home"      → SortControl + MovieList → MovieCard (×N)
+│   ├── view = "home"      → Hero (now_playing mode only) + SortControl + MovieList → MovieCard (×N)
 │   ├── view = "favorites" → ListPage → MovieList → MovieCard (×N)
 │   └── view = "watched"   → ListPage → MovieList → MovieCard (×N)
 ├── MovieModal (conditional)
@@ -81,6 +81,13 @@ App
 - **State:** None — fully controlled by App.
 - **UX:** Drawer is `position: fixed` and slides in from the left with a 320ms cubic-bezier transform. A scrim with `backdrop-filter: blur(2px)` dims the rest of the page behind it. Clicking a nav item closes the drawer and switches the view in one action.
 
+#### Hero
+- **Responsibility:** Cinematic auto-rotating banner at the top of the home view. Cycles through the top 5 top-rated movies, cross-fading every 10 seconds. Hosts the "Now Playing" mode toggle (top-left) — the same control that previously lived in the toolbar.
+- **Renders:** Layered backdrop images (only the active slide is opaque), a gradient overlay for text legibility, eyebrow text ("Top Rated"), title, truncated overview, rating + year, "View Details" CTA that opens the movie modal, and pagination dots tied to the active index.
+- **Props:** `slides: Movie[]`, `onCardClick: (id) => void`, `mode: string`, `onClearMode: () => void`.
+- **State:** Local `index` (current slide). Auto-advances via `setInterval` (cleared on unmount); clicking a dot or auto-advance both update the same index.
+- **Trigger:** Renders only when `view === 'home' && mode === 'now_playing'`. Hidden during search and on Favorites/Watched pages so the banner doesn't compete with focused list views.
+
 #### ListPage
 - **Responsibility:** Single destination page for a curated list (Favorites or Watched). Generic — receives the list data and labels as props.
 - **Renders:** A page header (title + description + count) and either a `<MovieList>` of the movies or an empty-state card with `emptyTitle` + `emptyText`.
@@ -123,6 +130,13 @@ App
   - **401** — bad/missing API key → same fallback; log a warning so it's debuggable
   - **Network failure** — show "Could not load details. Try again." with retry button
   - **Missing optional fields** (`runtime: null`, empty `genres`, missing `backdrop_path`) — render gracefully (`Runtime unknown`, omit genre row, fall back to a solid-color modal header instead of a backdrop image)
+
+### 2.6 Top Rated Movies (for Hero banner)
+- **Endpoint:** `GET /movie/top_rated`
+- **Required params:** `api_key`, `language=en-US`, `page` (default 1)
+- **Response fields used:** `results[].id`, `title`, `backdrop_path`, `overview`, `vote_average`, `release_date`
+- **Slide selection:** Filter to entries with both `backdrop_path` and `overview` (skip incomplete records), take the first 5.
+- **Error cases:** Network failure / 401 / 429 — `setHeroSlides([])`, Hero renders nothing. Banner is additive UX, not load-bearing.
 
 ### 2.5 Movie Videos (for trailer playback)
 - **Endpoint:** `GET /movie/{movie_id}/videos`
@@ -180,6 +194,7 @@ App
 | `watched` | `Set<number>` | `new Set()` | App | "Mark as watched" toggle on a MovieCard. Session-only. |
 | `view` | `"home" \| "favorites" \| "watched"` | `"home"` | App | Sidebar nav clicks set this. `handleSearch` and `handleClear` both reset it to `"home"` so search results / Now Playing always land on the grid. |
 | `isSidebarOpen` | `boolean` | `false` | App | Hamburger button toggles. Auto-closes on nav click and on scrim click. |
+| `heroSlides` | `Movie[]` | `[]` | App | One-time fetch of `getTopRated(1).results` filtered + sliced to 5; Hero renders nothing if empty. |
 | `inputValue` | `string` | `""` | SearchBar | Every keystroke (controlled input) |
 | `details` | `MovieDetails \| null` | `null` | App | Set after `getMovieDetails(selectedMovieId)` resolves; cleared when modal closes |
 | `trailer` | `{ key, name } \| null` | `null` | App | Set after `getMovieVideos` resolves and `pickBestTrailer` selects one; `null` if no trailer found or fetch fails |
@@ -507,3 +522,14 @@ A running log of what shipped per milestone, what diverged from the original pla
   - **Now Playing button stays enabled when on a list page** even if `mode === 'now_playing'`, so users always have a way back to the grid via the toolbar.
 - **What was removed:** The thumbnail-and-title list of saved movies that previously lived in the sidebar. Users now see those movies on the dedicated page rather than a peek-list inside the drawer. Trade-off: one extra click to see a saved movie, but the dedicated page has full poster cards instead of cramped thumbnails.
 - **Tradeoff:** No deep linking. Reloading on `/favorites` won't actually preserve that view — the `view` state resets to `"home"`. Acceptable since Favorites/Watched are session-only anyway (reload clears them too).
+
+### Milestone 12 — Hero Banner
+- **Built:** New [`Hero`](src/components/Hero.jsx) component — Apple TV+-style auto-rotating banner showing the top 5 top-rated movies. New `getTopRated(page)` helper in [tmdb.js](src/api/tmdb.js). Backdrops cross-fade every 10 seconds; pagination dots reflect + control the active slide. "Now Playing" mode toggle relocated from the toolbar onto the hero (top-left) so it sits where it does on streaming services.
+- **Decisions worth keeping:**
+  - **All slides mounted at once** with `opacity` toggling between them. Cross-fade is buttery; mounting/unmounting would flash.
+  - **`setInterval` cleaned up on unmount and on `slides.length` change** — switching pages or re-fetching slides resets the timer cleanly.
+  - **Hero only renders on `view === 'home' && mode === 'now_playing'`** — invisible during search (the search results are themselves the focus) and on list pages (those pages have their own headers).
+  - **Filter slides to ones with both `backdrop_path` and `overview`** — incomplete top-rated entries (e.g., obscure foreign titles) would otherwise show black rectangles or empty descriptions.
+  - **"View Details" CTA reuses `handleCardClick`** — same modal flow as the grid cards. One code path, three entry points (grid, sidebar list pages, hero).
+  - **Now Playing button uses backdrop-filter blur + frosted dark background** — sits on top of vivid backdrops without disappearing into them.
+- **Tradeoff:** Hero takes a 21:9 aspect ratio at desktop. On very tall monitors the banner is shorter than ideal but never dominates the viewport. On phones it switches to 16:11 and tightens text padding.
