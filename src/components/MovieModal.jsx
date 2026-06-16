@@ -1,6 +1,7 @@
-import { useEffect, useState } from 'react';
-import { BACKDROP_BASE } from '../api/tmdb';
+import { useEffect, useRef, useState } from 'react';
+import { BACKDROP_BASE, IMG_BASE } from '../api/tmdb';
 import { getWatchRecommendation } from '../api/ai';
+import { acquireScrollLock, releaseScrollLock } from '../utils/scrollLock';
 import './MovieModal.css';
 
 const formatRuntime = (minutes) => {
@@ -34,17 +35,22 @@ const MovieModal = ({ details, trailer, isLoading, error, onClose }) => {
     return () => clearTimeout(id);
   }, [trailer?.key]);
 
+  const onCloseRef = useRef(onClose);
+  useEffect(() => {
+    onCloseRef.current = onClose;
+  }, [onClose]);
+
   useEffect(() => {
     const handleKey = (e) => {
-      if (e.key === 'Escape') onClose();
+      if (e.key === 'Escape') onCloseRef.current?.();
     };
     window.addEventListener('keydown', handleKey);
-    document.body.style.overflow = 'hidden';
+    acquireScrollLock();
     return () => {
       window.removeEventListener('keydown', handleKey);
-      document.body.style.overflow = '';
+      releaseScrollLock();
     };
-  }, [onClose]);
+  }, []);
 
   useEffect(() => {
     if (!details || !details.overview) return;
@@ -130,6 +136,13 @@ const MovieModal = ({ details, trailer, isLoading, error, onClose }) => {
               )}
             </div>
             <div className="movie-modal__body">
+              {details.poster_path && (
+                <img
+                  className="movie-modal__poster"
+                  src={`${IMG_BASE}${details.poster_path}`}
+                  alt={`${details.title} poster`}
+                />
+              )}
               <h2 className="movie-modal__title">{details.title}</h2>
               {details.tagline && (
                 <p className="movie-modal__tagline">{details.tagline}</p>

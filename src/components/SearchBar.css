@@ -1,52 +1,114 @@
 /*
- * Visual intent: pill-shaped search bar that sits in the header. Fully
- * rounded edges (border-radius: 999px) read as a friendly, modern
- * search affordance. Compact buttons keep the bar inline with the brand.
+ * Visual intent: search collapses to a magnifying-glass icon button when
+ * idle. Hovering the icon brightens it; clicking expands it into a pill
+ * input that focuses immediately. Submitting or clearing collapses it
+ * back to the icon. Mirrors the streaming-service pattern (Apple TV+,
+ * Netflix, Spotify) where chrome stays minimal until the user reaches
+ * for it.
  */
+
+.search-bar__trigger {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 40px;
+  height: 40px;
+  padding: 0;
+  border: 1px solid var(--border-subtle);
+  border-radius: 999px;
+  background-color: transparent;
+  color: var(--text-body);
+  cursor: pointer;
+  transition: color 0.18s ease, border-color 0.18s ease,
+    background-color 0.18s ease, transform 0.18s ease;
+}
+
+.search-bar__trigger:hover {
+  color: var(--text-title);
+  border-color: var(--accent-purple);
+  background-color: rgba(139, 92, 246, 0.18);
+  transform: scale(1.05);
+}
+
+.search-bar__trigger:focus-visible {
+  outline: 2px solid var(--accent-yellow);
+  outline-offset: 2px;
+}
+
+.search-bar__trigger .search-bar__icon {
+  width: 18px;
+  height: 18px;
+}
 
 .search-bar {
   display: flex;
-  gap: 8px;
   align-items: center;
+  gap: 6px;
   width: 100%;
-  flex-wrap: nowrap;
+  max-width: 360px;
+  padding: 4px 6px 4px 14px;
+  background-color: var(--bg-card);
+  border: 1px solid var(--accent-yellow);
+  border-radius: 999px;
+  box-shadow: 0 0 0 2px rgba(255, 255, 19, 0.18);
+  animation: search-bar-expand 0.22s cubic-bezier(0.4, 0, 0.2, 1);
+  transform-origin: right center;
+}
+
+@keyframes search-bar-expand {
+  from {
+    opacity: 0;
+    transform: scaleX(0.4);
+  }
+  to {
+    opacity: 1;
+    transform: scaleX(1);
+  }
+}
+
+.search-bar__icon-wrap {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--text-body);
+  flex-shrink: 0;
+}
+
+.search-bar__icon-wrap .search-bar__icon {
+  width: 16px;
+  height: 16px;
 }
 
 .search-bar__input {
   flex: 1 1 auto;
   min-width: 0;
-  padding: 10px 18px;
+  padding: 8px 4px;
   font-size: 0.95rem;
   font-family: inherit;
-  background-color: var(--bg-card);
+  background-color: transparent;
   color: var(--text-title);
-  border: 1px solid var(--border-subtle);
-  border-radius: 999px;
-  transition: var(--transition-smooth);
+  border: none;
+  outline: none;
 }
 
 .search-bar__input::placeholder {
   color: var(--text-muted);
 }
 
-.search-bar__input:focus {
-  outline: none;
-  border-color: var(--accent-yellow);
-  box-shadow: 0 0 0 2px rgba(255, 255, 19, 0.25);
-}
-
 .search-bar__button {
   flex-shrink: 0;
-  padding: 10px 20px;
-  font-size: 0.9rem;
+  padding: 8px 16px;
+  font-size: 0.85rem;
   font-weight: 600;
   border-radius: 999px;
   background-color: var(--accent-purple);
   color: var(--text-title);
+  border: none;
+  cursor: pointer;
 }
 
 .search-bar__button:hover {
-  background-color: #5a00c4;
+  background-color: #a78bfa;
 }
 
 .search-bar__button--clear {
@@ -62,13 +124,16 @@
 }
 
 @media (max-width: 720px) {
+  .search-bar {
+    max-width: none;
+  }
+
   .search-bar__input {
-    padding: 8px 14px;
-    font-size: 0.88rem;
+    font-size: 0.9rem;
   }
 
   .search-bar__button {
-    padding: 8px 14px;
-    font-size: 0.82rem;
+    padding: 6px 12px;
+    font-size: 0.8rem;
   }
 }

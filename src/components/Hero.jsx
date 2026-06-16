@@ -69,14 +69,13 @@ const Hero = ({ slides = [], onCardClick, mode, onClearMode }) => {
           </button>
         </div>
 
-        <div className="hero__dots" role="tablist" aria-label="Choose movie">
+        <div className="hero__dots" aria-label="Choose featured movie">
           {slides.map((slide, i) => (
             <button
               key={slide.id}
               type="button"
-              role="tab"
-              aria-selected={i === index}
               aria-label={`Show ${slide.title}`}
+              aria-current={i === index ? 'true' : undefined}
               className={`hero__dot${i === index ? ' is-active' : ''}`}
               onClick={() => setIndex(i)}
             />

@@ -61,8 +61,6 @@ const MovieCard = ({
         >
           {isFavorite ? '♥' : '♡'}
         </button>
-      </div>
-      <div className="movie-card__body">
         <button
           type="button"
           className={`movie-card__watched${isWatched ? ' is-active' : ''}`}

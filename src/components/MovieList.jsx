@@ -37,16 +37,19 @@ const MovieList = ({
         ))}
       </div>
 
-      {isLoading && <p className="movie-list__status">Loading…</p>}
+      {isLoading && movies.length === 0 && (
+        <p className="movie-list__status">Loading…</p>
+      )}
 
-      {!isLoading && hasMore && movies.length > 0 && (
+      {hasMore && movies.length > 0 && (
         <div className="movie-list__footer">
           <button
             type="button"
             className="movie-list__load-more"
             onClick={onLoadMore}
+            disabled={isLoading}
           >
-            Load More
+            {isLoading ? 'Loading…' : 'Load More'}
           </button>
         </div>
       )}

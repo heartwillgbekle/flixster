@@ -6,11 +6,12 @@ export const BACKDROP_BASE = 'https://image.tmdb.org/t/p/w780';
 
 async function tmdbFetch(path, params = {}) {
   const url = new URL(`${BASE_URL}${path}`);
-  url.searchParams.set('api_key', API_KEY);
-  url.searchParams.set('language', 'en-US');
-  for (const [key, value] of Object.entries(params)) {
-    url.searchParams.set(key, value);
-  }
+  const searchParams = new URLSearchParams({
+    api_key: API_KEY,
+    language: 'en-US',
+    ...params,
+  });
+  url.search = searchParams.toString();
 
   const res = await fetch(url);
   if (!res.ok) {

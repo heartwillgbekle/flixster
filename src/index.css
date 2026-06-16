@@ -7,18 +7,18 @@
  */
 
 :root {
-  --bg-main: #0a0019;
-  --bg-card: #161324;
-  --bg-card-hover: #1f1a31;
+  --bg-main: #3a1f6e;
+  --bg-card: #4a2c8c;
+  --bg-card-hover: #563499;
   --accent-yellow: #ffff13;
-  --accent-purple: #45009d;
-  --accent-purple-soft: rgba(69, 0, 157, 0.3);
+  --accent-purple: #8b5cf6;
+  --accent-purple-soft: rgba(139, 92, 246, 0.35);
 
   --text-title: #ffffff;
-  --text-body: #a39eb8;
-  --text-muted: #7d7891;
+  --text-body: #d4cce8;
+  --text-muted: #b0a5cf;
 
-  --border-subtle: rgba(255, 255, 255, 0.08);
+  --border-subtle: rgba(255, 255, 255, 0.14);
 
   --font-sans: 'Inter', system-ui, -apple-system, sans-serif;
 

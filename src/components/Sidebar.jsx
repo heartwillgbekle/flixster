@@ -19,6 +19,7 @@ const Sidebar = ({
     className={`sidebar${isOpen ? ' sidebar--open' : ''}`}
     aria-label="Navigation"
     aria-hidden={!isOpen}
+    inert={!isOpen ? '' : undefined}
   >
     <div className="sidebar__inner">
       <h2 className="sidebar__title">My Lists</h2>

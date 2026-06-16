@@ -17,6 +17,7 @@ import {
   pickBestTrailer,
   searchMovies,
 } from './api/tmdb'
+import { acquireScrollLock, releaseScrollLock } from './utils/scrollLock'
 
 const SORT_FNS = {
   'title-asc': (a, b) => a.title.localeCompare(b.title),
@@ -27,6 +28,7 @@ const SORT_FNS = {
 
 const App = () => {
   const [movies, setMovies] = useState([])
+  const [movieCache, setMovieCache] = useState(() => new Map())
   const [searchQuery, setSearchQuery] = useState('')
   const [page, setPage] = useState(1)
   const [mode, setMode] = useState('now_playing')
@@ -55,19 +57,34 @@ const App = () => {
   }, [movies, sortOption])
 
   useEffect(() => {
+    if (!isSidebarOpen) return
+    const handleKey = (e) => {
+      if (e.key === 'Escape') setIsSidebarOpen(false)
+    }
+    window.addEventListener('keydown', handleKey)
+    acquireScrollLock()
+    return () => {
+      window.removeEventListener('keydown', handleKey)
+      releaseScrollLock()
+    }
+  }, [isSidebarOpen])
+
+  useEffect(() => {
     let cancelled = false
-    console.log('[Hero] fetching top rated…')
     getTopRated(1)
       .then((data) => {
         if (cancelled) return
         const picks = data.results
           .filter((m) => m.backdrop_path && m.overview)
           .slice(0, 5)
-        console.log('[Hero] slides ready:', picks.length, picks.map((p) => p.title))
         setHeroSlides(picks)
+        setMovieCache((prev) => {
+          const next = new Map(prev)
+          for (const m of data.results) next.set(m.id, m)
+          return next
+        })
       })
-      .catch((err) => {
-        console.warn('[Hero] fetch failed', err)
+      .catch(() => {
         if (!cancelled) setHeroSlides([])
       })
     return () => {
@@ -85,9 +102,17 @@ const App = () => {
     setError(null)
     fetcher()
       .then((data) => {
-        setMovies((prev) =>
-          page === 1 ? data.results : [...prev, ...data.results]
-        )
+        setMovies((prev) => {
+          if (page === 1) return data.results
+          const seen = new Set(prev.map((m) => m.id))
+          const fresh = data.results.filter((m) => !seen.has(m.id))
+          return [...prev, ...fresh]
+        })
+        setMovieCache((prev) => {
+          const next = new Map(prev)
+          for (const m of data.results) next.set(m.id, m)
+          return next
+        })
         setHasMore(data.page < data.total_pages)
       })
       .catch((err) => setError(err.message))
@@ -110,7 +135,13 @@ const App = () => {
 
     getMovieDetails(selectedMovieId)
       .then((data) => {
-        if (!cancelled) setDetails(data)
+        if (cancelled) return
+        setDetails(data)
+        setMovieCache((prev) => {
+          const next = new Map(prev)
+          next.set(data.id, { ...prev.get(data.id), ...data })
+          return next
+        })
       })
       .catch((err) => {
         if (!cancelled) setDetailsError(err.message)
@@ -149,6 +180,7 @@ const App = () => {
   }
 
   const handleLoadMore = () => {
+    if (isLoading) return
     setPage((prev) => prev + 1)
   }
 
@@ -172,25 +204,24 @@ const App = () => {
   }
 
   const favoriteMovies = useMemo(
-    () => movies.filter((m) => favorites.has(m.id)),
-    [movies, favorites]
+    () =>
+      [...favorites]
+        .map((id) => movieCache.get(id))
+        .filter(Boolean),
+    [movieCache, favorites]
   )
   const watchedMovies = useMemo(
-    () => movies.filter((m) => watched.has(m.id)),
-    [movies, watched]
+    () =>
+      [...watched]
+        .map((id) => movieCache.get(id))
+        .filter(Boolean),
+    [movieCache, watched]
   )
 
   return (
     <div className="App">
-      <Header>
-        <SearchBar
-          activeQuery={mode === 'search' ? searchQuery : ''}
-          onSearch={handleSearch}
-          onClear={handleClear}
-        />
-      </Header>
-      <main className="App-main">
-        <div className="App-toolbar">
+      <Header
+        leading={
           <button
             type="button"
             className={`App-toolbar__sidebar-toggle${
@@ -208,7 +239,22 @@ const App = () => {
               <span />
             </span>
           </button>
-        </div>
+        }
+      >
+        {view === 'home' && (
+          <SortControl
+            sortOption={sortOption}
+            onSortChange={setSortOption}
+          />
+        )}
+        <SearchBar
+          key={mode === 'search' ? searchQuery : '__home__'}
+          activeQuery={mode === 'search' ? searchQuery : ''}
+          onSearch={handleSearch}
+          onClear={handleClear}
+        />
+      </Header>
+      <main className="App-main">
         <Sidebar
           id="lists-panel"
           isOpen={isSidebarOpen}
@@ -230,17 +276,11 @@ const App = () => {
 
         {view === 'home' && (
           <>
-            {mode === 'now_playing' && (
-              <Hero
-                slides={heroSlides}
-                onCardClick={handleCardClick}
-                mode={mode}
-                onClearMode={handleClear}
-              />
-            )}
-            <SortControl
-              sortOption={sortOption}
-              onSortChange={setSortOption}
+            <Hero
+              slides={heroSlides}
+              onCardClick={handleCardClick}
+              mode={mode}
+              onClearMode={handleClear}
             />
             <MovieList
               movies={sortedMovies}

@@ -1,9 +1,9 @@
 /*
- * Visual intent: poster-first card. Image dominates, text plays support.
- * Hover lifts the card with a subtle scale + purple glow to add energy
- * to the grid without making the layout feel jittery.
- * Heart icon overlays the poster top-right; "watched" button sits below
- * the rating so toggling state never moves what the user is reading.
+ * Visual intent: poster fills the entire card. All chrome (rating
+ * pill top-left, heart top-right, "Mark as watched" pill bottom)
+ * floats over the poster with a translucent treatment, hidden until
+ * hover/focus. Inspired by streaming services where the poster is
+ * the hero and chrome only appears when intent is signaled.
  */
 
 .movie-card {
@@ -15,8 +15,6 @@
   text-align: left;
   font-family: inherit;
   transition: var(--transition-smooth);
-  display: flex;
-  flex-direction: column;
   outline: none;
 }
 
@@ -42,12 +40,6 @@
   display: block;
 }
 
-.movie-card__body {
-  padding: 10px;
-  display: flex;
-  flex-direction: column;
-}
-
 .movie-card__rating {
   position: absolute;
   top: 8px;
@@ -63,6 +55,10 @@
   font-weight: 700;
   letter-spacing: 0.3px;
   z-index: 1;
+  opacity: 0;
+  transform: translateY(-4px);
+  pointer-events: none;
+  transition: opacity 0.2s ease, transform 0.2s ease;
 }
 
 .movie-card__icon-btn {
@@ -81,9 +77,13 @@
   align-items: center;
   justify-content: center;
   cursor: pointer;
-  transition: var(--transition-smooth);
+  transition: background-color 0.2s ease, color 0.2s ease,
+    transform 0.2s ease, opacity 0.2s ease;
   padding: 0;
   z-index: 1;
+  opacity: 0;
+  transform: translateY(-4px);
+  pointer-events: none;
 }
 
 .movie-card__icon-btn:hover {
@@ -97,26 +97,66 @@
 }
 
 .movie-card__watched {
-  margin: 0;
-  padding: 6px 10px;
-  font-size: 0.78rem;
+  position: absolute;
+  left: 10px;
+  right: 10px;
+  bottom: 10px;
+  padding: 9px 14px;
+  font-family: inherit;
+  font-size: 0.82rem;
   font-weight: 600;
-  background-color: transparent;
-  color: var(--text-body);
-  border: 1px solid var(--border-subtle);
-  border-radius: var(--radius-sm);
+  background-color: rgba(255, 255, 255, 0.18);
+  color: var(--text-title);
+  border: 1px solid rgba(255, 255, 255, 0.3);
+  border-radius: 999px;
   cursor: pointer;
   text-align: center;
-  transition: var(--transition-smooth);
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+  z-index: 1;
+  opacity: 0;
+  transform: translateY(8px);
+  pointer-events: none;
+  transition: background-color 0.2s ease, border-color 0.2s ease,
+    color 0.2s ease, opacity 0.2s ease, transform 0.2s ease;
 }
 
 .movie-card__watched:hover {
+  background-color: rgba(255, 255, 255, 0.28);
+  border-color: rgba(255, 255, 255, 0.5);
+}
+
+.movie-card__watched.is-active {
+  background-color: rgba(139, 92, 246, 0.7);
   border-color: var(--accent-purple);
   color: var(--text-title);
 }
 
-.movie-card__watched.is-active {
-  background-color: var(--accent-purple);
-  border-color: var(--accent-purple);
-  color: var(--text-title);
+.movie-card:hover .movie-card__rating,
+.movie-card:focus-visible .movie-card__rating,
+.movie-card:focus-within .movie-card__rating,
+.movie-card:hover .movie-card__icon-btn,
+.movie-card:focus-visible .movie-card__icon-btn,
+.movie-card:focus-within .movie-card__icon-btn {
+  opacity: 1;
+  transform: translateY(0);
+  pointer-events: auto;
+}
+
+.movie-card:hover .movie-card__watched,
+.movie-card:focus-visible .movie-card__watched,
+.movie-card:focus-within .movie-card__watched {
+  opacity: 1;
+  transform: translateY(0);
+  pointer-events: auto;
+}
+
+@media (hover: none) {
+  .movie-card__rating,
+  .movie-card__icon-btn,
+  .movie-card__watched {
+    opacity: 1;
+    transform: translateY(0);
+    pointer-events: auto;
+  }
 }

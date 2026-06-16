@@ -1,11 +1,11 @@
 /*
  * Responsive flex grid — mobile-first.
- *   < 600px  : ~2 cards/row, basis 140px, 12px gap
- *   600–1023 : ~3–5 cards/row, basis 170px, 16px gap
- *   ≥ 1024   : ~5–7 cards/row, basis 200px, 24px gap
+ *   < 600px  : ~2 cards/row, basis 200px, 14px gap
+ *   600–1023 : ~3 cards/row, basis 280px, 18px gap
+ *   ≥ 1024   : ~3–4 cards/row, basis 340px, 24px gap
  * Cards use flex-basis to control row count; max-width caps orphan cards
  * on the last row so they don't stretch to fill the whole row.
- * Max content width 1400px, centered.
+ * Max content width 1600px, centered.
  *
  * Visual intent: airy, evenly spaced grid. Status messages are quiet
  * and centered; the Load More button is a yellow-bordered ghost that
@@ -15,26 +15,26 @@
 .movie-list {
   display: flex;
   flex-wrap: wrap;
-  gap: 12px;
-  padding: 12px;
-  max-width: 1400px;
+  gap: 14px;
+  padding: 14px;
+  max-width: 1600px;
   margin: 0 auto;
 }
 
 .movie-list .movie-card {
-  flex: 1 1 140px;
-  max-width: 200px;
+  flex: 1 1 170px;
+  max-width: 240px;
 }
 
 @media (min-width: 600px) {
   .movie-list {
-    gap: 16px;
+    gap: 18px;
     padding: 20px;
   }
 
   .movie-list .movie-card {
-    flex: 1 1 170px;
-    max-width: 220px;
+    flex: 1 1 230px;
+    max-width: 300px;
   }
 }
 
@@ -45,8 +45,8 @@
   }
 
   .movie-list .movie-card {
-    flex: 1 1 200px;
-    max-width: 240px;
+    flex: 1 1 280px;
+    max-width: 340px;
   }
 }
 

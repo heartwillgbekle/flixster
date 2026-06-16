@@ -8,7 +8,7 @@
 .movie-modal__backdrop {
   position: fixed;
   inset: 0;
-  background-color: rgba(10, 0, 25, 0.85);
+  background-color: rgba(0, 0, 0, 0.85);
   backdrop-filter: blur(8px);
   -webkit-backdrop-filter: blur(8px);
   display: flex;
@@ -86,6 +86,17 @@
   padding: 20px 24px 24px;
 }
 
+.movie-modal__poster {
+  float: left;
+  width: 160px;
+  aspect-ratio: 2 / 3;
+  object-fit: cover;
+  border-radius: var(--radius-md);
+  margin: 0 18px 12px 0;
+  box-shadow: 0 6px 16px rgba(0, 0, 0, 0.45);
+  display: block;
+}
+
 .movie-modal__title {
   margin: 0 0 4px;
   font-size: 1.6rem;
@@ -123,7 +134,7 @@
 }
 
 .movie-modal__genre {
-  background-color: rgba(69, 0, 157, 0.4);
+  background-color: rgba(139, 92, 246, 0.4);
   color: var(--text-title);
   padding: 4px 10px;
   border-radius: 999px;
@@ -140,14 +151,15 @@
 }
 
 .movie-modal__ai {
+  clear: both;
   margin-top: 16px;
   padding: 14px 16px 16px;
   border: 1px solid var(--accent-purple);
   border-radius: var(--radius-md);
   background: linear-gradient(
     180deg,
-    rgba(69, 0, 157, 0.18) 0%,
-    rgba(69, 0, 157, 0.06) 100%
+    rgba(139, 92, 246, 0.18) 0%,
+    rgba(139, 92, 246, 0.06) 100%
   );
 }
 
@@ -198,6 +210,11 @@
 @media (max-width: 600px) {
   .movie-modal__body {
     padding: 16px 16px 20px;
+  }
+
+  .movie-modal__poster {
+    width: 110px;
+    margin-right: 14px;
   }
 
   .movie-modal__title {

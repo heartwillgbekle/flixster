@@ -12,15 +12,6 @@
   flex-direction: column;
 }
 
-.App-toolbar {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 12px;
-  padding: 20px 16px 0;
-  flex-wrap: wrap;
-}
-
 .App-toolbar__sidebar-toggle {
   width: 40px;
   height: 40px;
@@ -36,12 +27,12 @@
 
 .App-toolbar__sidebar-toggle:hover {
   border-color: var(--accent-purple);
-  background-color: rgba(69, 0, 157, 0.12);
+  background-color: rgba(139, 92, 246, 0.12);
 }
 
 .App-toolbar__sidebar-toggle.is-open {
   border-color: var(--accent-purple);
-  background-color: rgba(69, 0, 157, 0.18);
+  background-color: rgba(139, 92, 246, 0.18);
 }
 
 .App-toolbar__bars {
@@ -88,7 +79,7 @@
 .App-sidebar-scrim {
   position: fixed;
   inset: 0;
-  background-color: rgba(10, 0, 25, 0.55);
+  background-color: rgba(0, 0, 0, 0.55);
   backdrop-filter: blur(2px);
   -webkit-backdrop-filter: blur(2px);
   z-index: 940;
@@ -104,25 +95,3 @@
   }
 }
 
-.App-toolbar__nav {
-  padding: 8px 22px;
-  font-size: 0.95rem;
-  font-weight: 600;
-  border-radius: var(--radius-sm);
-  background-color: transparent;
-  color: var(--text-title);
-  border: 1px solid var(--accent-purple);
-  margin-left: auto;
-}
-
-.App-toolbar__nav:hover:not(:disabled) {
-  background-color: var(--accent-purple);
-  border-color: var(--accent-purple);
-}
-
-.App-toolbar__nav:disabled {
-  background-color: var(--accent-purple);
-  border-color: var(--accent-purple);
-  color: var(--text-title);
-  opacity: 0.7;
-}
