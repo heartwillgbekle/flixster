@@ -1,7 +1,9 @@
 /*
- * Visual intent: full-width header with brand on the left (logo + name +
- * tagline as a vertical lockup) and an actions slot on the right that
- * holds the search bar. Layout collapses to stacked on narrow viewports.
+ * Visual intent: full-width header with hamburger pinned to the top-left,
+ * brand absolutely centered, and actions (sort + search) flush right.
+ * On narrow viewports the absolute centering is dropped and everything
+ * stacks: hamburger row up top, brand centered below, sort centered
+ * under the brand. Centered brand stays centered at every breakpoint.
  */
 
 .header {
@@ -93,49 +95,72 @@
 
 @media (max-width: 720px) {
   .header {
-    padding: 16px 18px;
-    gap: 14px;
-    justify-content: center;
+    padding: 14px 16px 16px;
+    gap: 12px;
+    justify-content: space-between;
+    flex-direction: row;
+    flex-wrap: wrap;
   }
 
+  /* Drop absolute centering on mobile; let flex flow handle it. */
   .header__brand {
     position: static;
     transform: none;
     pointer-events: auto;
+    order: 2;
+    width: 100%;
+    justify-content: center;
+    text-align: center;
+    gap: 12px;
+    margin-top: 4px;
+  }
+
+  .header__text {
+    text-align: left;
+  }
+
+  .header__leading {
+    order: 1;
+    margin-right: 0;
   }
 
   .header__logo {
-    width: 40px;
-    height: 40px;
+    width: 44px;
+    height: 44px;
   }
 
   .header__title {
-    font-size: 1.4rem;
+    font-size: 1.5rem;
   }
 
   .header__tagline {
-    font-size: 0.78rem;
+    font-size: 0.8rem;
   }
 
   .header__actions {
-    width: 100%;
-    flex: 1 1 100%;
-    justify-content: flex-start;
-    flex-wrap: wrap;
-  }
-
-  .header__actions > .sort-control {
-    order: 2;
-    width: 100%;
-  }
-
-  .header__actions > .search-bar {
     order: 1;
-    flex: 1 1 100%;
+    flex: 0 0 auto;
+    width: auto;
+    gap: 10px;
+    justify-content: flex-end;
+  }
+}
+
+@media (max-width: 480px) {
+  .header {
+    padding: 12px 14px 14px;
   }
 
-  .header__actions > .search-bar__trigger {
-    order: 1;
-    margin-left: auto;
+  .header__logo {
+    width: 38px;
+    height: 38px;
+  }
+
+  .header__title {
+    font-size: 1.3rem;
+  }
+
+  .header__tagline {
+    font-size: 0.75rem;
   }
 }

@@ -1,11 +1,16 @@
 /*
- * Visual intent: inline text-link nav inspired by Apple TV+'s top-bar
- * navigation. Sort options sit side-by-side in the header next to the
- * search bar; the active option uses high-contrast white, others fade to
- * muted gray. No buttons-as-buttons styling — looks like nav links.
+ * Visual intent: inline text-link nav on desktop (Apple TV+ style), and
+ * a compact "Sort ▾" dropdown on mobile so four labels don't crowd the
+ * narrow header. Active option is white with a yellow underline; inactive
+ * options are muted gray and brighten on hover.
  */
 
 .sort-control {
+  position: relative;
+}
+
+/* Inline mode — desktop default */
+.sort-control__inline {
   display: flex;
   align-items: center;
   gap: 18px;
@@ -51,12 +56,97 @@
   border-radius: 2px;
 }
 
+/* Compact dropdown mode — hidden on desktop, shown on mobile */
+.sort-control__compact {
+  display: none;
+  position: relative;
+}
+
+.sort-control__toggle {
+  background-color: transparent;
+  border: 1px solid var(--border-subtle);
+  border-radius: 999px;
+  padding: 7px 14px;
+  font-family: inherit;
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: var(--text-title);
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  transition: border-color 0.18s ease, background-color 0.18s ease;
+}
+
+.sort-control__toggle:hover {
+  border-color: var(--accent-purple);
+  background-color: rgba(139, 92, 246, 0.18);
+}
+
+.sort-control__toggle:focus-visible {
+  outline: 2px solid var(--accent-yellow);
+  outline-offset: 2px;
+}
+
+.sort-control__menu {
+  position: absolute;
+  top: calc(100% + 8px);
+  right: 0;
+  min-width: 160px;
+  margin: 0;
+  padding: 6px;
+  list-style: none;
+  background-color: var(--bg-card);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-md);
+  box-shadow: 0 12px 24px rgba(0, 0, 0, 0.5);
+  z-index: 200;
+  animation: sort-menu-in 0.16s ease-out;
+}
+
+@keyframes sort-menu-in {
+  from {
+    opacity: 0;
+    transform: translateY(-4px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.sort-control__menu-item {
+  display: block;
+  width: 100%;
+  padding: 9px 12px;
+  background-color: transparent;
+  border: none;
+  border-radius: var(--radius-sm);
+  font-family: inherit;
+  font-size: 0.9rem;
+  font-weight: 500;
+  color: var(--text-body);
+  text-align: left;
+  cursor: pointer;
+  transition: background-color 0.15s ease, color 0.15s ease;
+}
+
+.sort-control__menu-item:hover {
+  background-color: var(--bg-card-hover);
+  color: var(--text-title);
+}
+
+.sort-control__menu-item.is-active {
+  color: var(--accent-yellow);
+  background-color: rgba(139, 92, 246, 0.18);
+}
+
 @media (max-width: 720px) {
-  .sort-control {
-    gap: 12px;
+  .sort-control__inline {
+    display: none;
   }
 
-  .sort-control__option {
-    font-size: 0.85rem;
+  .sort-control__compact {
+    display: block;
   }
 }
