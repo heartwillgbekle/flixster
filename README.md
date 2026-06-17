@@ -1,6 +1,6 @@
 ## Unit Assignment: Flixster
 
-Submitted by: **Heartwill**
+Submitted by: **Heartwill Gbekle**
 
 Estimated time spent: **15** hours spent in total
 
