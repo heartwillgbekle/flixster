@@ -173,7 +173,6 @@ App
   - **Network failure** — fallback message
   - **Empty or whitespace-only `content`** — fallback message (treat as failure even though HTTP succeeded)
 
-> ⚠️ **Security note:** Calling OpenRouter directly from the browser ships the API key to anyone who opens DevTools. Acceptable for this learning project; production would proxy through a backend that holds the key server-side.
 
 ---
 
@@ -371,9 +370,6 @@ When the MovieModal opens, generate a 2–3 sentence AI-written recommendation t
 ### Logging
 - On error, `console.warn("AI insight failed", { movieId, status, message })` so failures are debuggable in DevTools without surfacing technical details to the user.
 
-### Security note (carried over from §2.4)
-> ⚠️ The OpenRouter API key ships to the browser via `import.meta.env`. Acceptable for this learning project; production would proxy through a backend.
-
 ### AI Feature — Decisions Log
 
 - **What the API returned initially:** Smoke-tested with *The Batman* details → got: *"If you're in the mood for a brooding, rain-slick dive into Gotham's underbelly, The Batman delivers a moody, methodical mystery that rewards patience more than punch-lines. Expect a dense, atmospheric thriller where every clue feels earned — just be ready for a slower burn rather than nonstop action."* This hit the spec on first pass: 2 sentences, second-person ("you're in the mood"), no spoilers, no banned phrases ("must-see", "tour de force"), correct tone (enthusiastic but honest), no markdown. **No prompt iteration needed.**
@@ -396,13 +392,13 @@ A running log of what shipped per milestone, what diverged from the original pla
 - **Decisions worth keeping:** App owns global data state; modal owns its own scoped state (details + AI); AI call kept provider-agnostic so we can pick at Milestone 8.
 - **Open questions deferred to later milestones:** sort UI placement, modal animation, AI provider choice.
 
-### Milestone 1 — MovieCard + MovieList
+### Milestone 1 — MovieCard, MovieList
 - **Built:** [`src/api/tmdb.js`](src/api/tmdb.js) helper with `getNowPlaying` / `searchMovies` / `getMovieDetails`. [`MovieCard`](src/components/MovieCard.jsx) renders poster + title + vote average; [`MovieList`](src/components/MovieList.jsx) fetched Now Playing on mount and rendered a card per result.
 - **Diverged:** Per Milestone 1 instructions, fetching lived in MovieList (not App as originally specced). State (`movies`/`isLoading`/`error`) was owned there temporarily.
 - **Decisions worth keeping:** Wrapped MovieCard in a `<button>` for native keyboard accessibility once `onClick` lands. Fallback poster URL for movies with `null` poster_path.
 - **Tech-debt flagged:** State would have to be lifted to App as soon as SearchBar/SortControl arrived — paid down in Milestone 2.
 
-### Milestone 2 — Search + Pagination + Mode toggle
+### Milestone 2 — Search, Pagination, Mode toggle
 - **Built:** [`SearchBar`](src/components/SearchBar.jsx) with controlled input, header "Now Playing" toggle, "Load More" button. App now owns all data state and runs a single `useEffect` keyed on `[mode, searchQuery, page]`. Page 1 replaces `movies`; pages 2+ append via `setMovies(prev => [...prev, ...new])`. `hasMore` derived from `page < total_pages`.
 - **Diverged:** Added a new `mode: "now_playing" | "search"` state variable that wasn't in the original spec — needed to disambiguate which endpoint the next page should hit when "Load More" is clicked. Spec updated to match.
 - **Decisions worth keeping:** SearchBar keeps its own `inputValue` state and only lifts on submit (not every keystroke) — avoids re-fetching on every character. Two ways to leave search mode (Clear button + header "Now Playing") so users always have an obvious exit. Trim + reject empty submissions to avoid wasted API calls.
@@ -414,7 +410,7 @@ A running log of what shipped per milestone, what diverged from the original pla
 - **Decisions worth keeping:** Mobile-first (`min-width` queries) is cleaner than `max-width` overrides — base styles target the smallest screen. Per-breakpoint flex-basis is the knob to tune; gap and padding follow. Capped grid at `max-width: 1400px` so ultra-wide monitors don't get sparse rows.
 - **Tradeoff to remember:** With Flexbox + max-width, very wide screens may show extra horizontal space between cards (rather than stretching them indefinitely). Acceptable for movie posters since vertical aspect ratio matters more than horizontal stretch.
 
-### Milestone 4 — MovieModal + Movie Details fetch
+### Milestone 4 — MovieModal, Movie Details fetch
 - **Built:** [`MovieModal`](src/components/MovieModal.jsx) + [`MovieModal.css`](src/components/MovieModal.css). Renders backdrop image (16:9), title, optional tagline, release date + runtime, genre chip list, and overview. Three close affordances: × button, Escape key, backdrop click. Body scroll lock while open.
 - **App changes:** Added `selectedMovieId`, `details`, `isLoadingDetails`, `detailsError` state. Second `useEffect` keyed on `selectedMovieId` fetches details with a `cancelled` flag to ignore stale responses when the user clicks through movies quickly. `handleCardClick` and `handleCloseModal` wire the open/close transitions.
 - **MovieList:** Now forwards `onCardClick` to each `MovieCard` (forwarding-only — no logic).
@@ -440,7 +436,7 @@ A running log of what shipped per milestone, what diverged from the original pla
   - **Sort persists across mode switches and Load More** — intentional. Searching while sorted by rating keeps the search results sorted by rating; loading more pages folds new movies into the existing sort order.
 - **Edge cases handled / accepted:** `localeCompare` handles unicode/diacritics correctly; missing `release_date` (rare) sorts to `NaN` which is benign; `vote_average` defaults to 0 from TMDb so missing-rating sort is well-defined.
 
-### Milestone 6 — Header + Footer + Logo
+### Milestone 6 — Header, Footer, Logo
 - **Built:** [`Header`](src/components/Header.jsx) + [`Header.css`](src/components/Header.css) — logo, title, tagline. [`Footer`](src/components/Footer.jsx) + [`Footer.css`](src/components/Footer.css) — copyright + TMDb attribution link. New SVG logo at [`src/assets/flixster-logo.svg`](src/assets/flixster-logo.svg) — red film canister with white perforation squares and a centered play triangle. Single asset import means it works at any size and ships as one tiny SVG.
 - **App changes:** Replaced inline `<header className="App-header">` with `<Header />`. Wrapped the existing controls + grid in `<main className="App-main">` and added `<Footer />` at the bottom. Moved the "Now Playing" mode toggle out of the header into a small `App-toolbar` div inside `<main>` so Header could stay prop-less per the spec. Made `.App` a flex column with `min-height: 100vh` and `<main>` flex-grow so the footer always sits at the bottom even on short pages.
 - **App.css cleanup:** Removed all `.App-header` and `.App-header__nav` rules (Header owns its own styling now). Removed the `@media (max-width: 600px) .App-header` block since Header.css has its own mobile rules.
@@ -452,7 +448,7 @@ A running log of what shipped per milestone, what diverged from the original pla
   - **TMDb attribution wording** matches their public-facing requirement: "This product uses the TMDb API but is not endorsed or certified by TMDb."
 - **Tradeoff:** Modal is rendered as a sibling of `<main>` and `<Footer>`, not inside `<main>`. Keeps the modal's `position: fixed` overlay above everything regardless of where the user has scrolled.
 
-### Milestone 7 — Polish + Accessibility
+### Milestone 7 — Polish, Accessibility
 - **Built:** Adopted a cinematic dark theme — deep indigo-purple canvas (`#0a0019`), slate-purple cards, electric-yellow CTAs/ratings, white headings on muted lavender body copy. All design tokens live as CSS custom properties on `:root` in [`src/index.css`](src/index.css) — components pull them directly so a future palette swap is one file. Imported **Inter** from Google Fonts (weights 400/500/600/700/900). Restyled every component (Header, Footer, MovieCard, MovieList, MovieModal, SearchBar, SortControl, App toolbar) to use the tokens.
 - **Visual intent recorded as comments** at the top of each CSS file (1–2 sentences per file describing what the styles are trying to achieve), per the milestone instructions.
 - **Accessibility fixes:**
@@ -487,7 +483,7 @@ A running log of what shipped per milestone, what diverged from the original pla
   - **Per-movie caching** — refetching on every modal open is fine at this volume; would matter only with heavy reuse.
   - **Retry logic** — single-shot for now; rate-limit responses surface as the friendly fallback rather than auto-retrying.
 
-### Milestone 9 — Favorites + Watched + Sidebar
+### Milestone 9 — Favorites, Watched, Sidebar
 - **Built:** Heart icon (♡/♥) overlaid on each [`MovieCard`](src/components/MovieCard.jsx) poster + a "Mark as watched" / "✓ Watched" toggle button below the rating. New [`Sidebar`](src/components/Sidebar.jsx) component renders Favorites and Watched lists with thumbnail + title, count badges, and click-to-open behavior. App holds both lists as `Set<number>` for O(1) lookups; Sidebar receives derived `Movie[]` arrays via `useMemo` over the current `movies` list.
 - **App-shell layout:** Wrapped main content in `.App-shell` (flex row) so Sidebar sits on the left and `<main>` flexes to fill. Below 900px the shell switches to a stacked column with the sidebar capped at 240px and internally scrollable.
 - **Decisions worth keeping:**
@@ -511,7 +507,7 @@ A running log of what shipped per milestone, what diverged from the original pla
   - **`pointer-events` not blocked** — modal's existing `body { overflow: hidden }` doesn't prevent iframe interaction; fullscreen and player controls still work.
 - **Tradeoff:** YouTube embeds load ~500KB of player JS lazily once the iframe mounts. Acceptable for this UX (user opted into the modal, motion is expected); a `loading="lazy"` attribute would help if the iframe ever became scroll-revealed instead of always above-the-fold.
 
-### Milestone 11 — Tabs / Routing for Favorites + Watched
+### Milestone 11 — Tabs / Routing for Favorites, Watched
 - **Built:** Sidebar refactored from a list-displaying drawer into a **navigation drawer** with three nav buttons (Home, Favorites, Watched). New generic [`ListPage`](src/components/ListPage.jsx) component renders a curated list with header + count + (movies grid OR empty state). App keeps a `view` state var (`"home" | "favorites" | "watched"`) and conditionally renders either the home grid (with SortControl) or a `<ListPage>`.
 - **Routing without a router:** Used a simple state-driven view switch instead of pulling in `react-router-dom`. For three top-level views with no URL persistence requirement, a `view` state var is meaningfully simpler — no provider tree, no `<Route>` config, no URL-encoding of state, no library to learn.
 - **Decisions worth keeping:**
